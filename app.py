@@ -1,5 +1,5 @@
 # --- app_final_english.py ---
-# Version 6.5: Added a simple, secure login page.
+# Version 6.6: Moved credentials to Streamlit Secrets for security.
 
 import streamlit as st
 import pandas as pd
@@ -16,7 +16,7 @@ import re
 # ==============================================================================
 # This must be the first Streamlit command.
 st.set_page_config(
-    page_title="Team Skills Hub 6.5",
+    page_title="Team Skills Hub 6.6",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -154,13 +154,11 @@ def main_app():
     This function contains the entire Streamlit dashboard application.
     It is called only after a successful login.
     """
-    # --- Sidebar (only shows after login) ---
     st.sidebar.title("🚀 Team Skills Hub")
     st.sidebar.markdown("---")
     st.sidebar.info("A strategic platform for talent intelligence and team development.")
     st.sidebar.markdown("---")
     
-    # --- Main data loading and processing flow ---
     skills_file_path = Path(__file__).parent / "selfAssessment.csv"
     user_file_path = Path(__file__).parent / "userData.csv"
     skills_load_result = load_skills_data(skills_file_path)
@@ -175,9 +173,6 @@ def main_app():
     if df_merged.empty: st.warning("No participants with valid scores were found."); st.stop()
     analytics = compute_analytics(df_merged); person_summary = analytics.get('person_summary', pd.DataFrame()); risk_radar = analytics.get('risk_radar', pd.DataFrame())
 
-    # ==============================================================================
-    #                                  APP LAYOUT
-    # ==============================================================================
     st.title("🚀 Team Skills & Affinity Hub")
     with st.expander("ℹ️ How to Use This Dashboard", expanded=False):
         st.markdown("""
@@ -188,12 +183,13 @@ def main_app():
             - **🧠 Skill Analysis:** Deep dive into talent composition and skill performance.
         """)
 
-    # Reordered tabs based on user feedback for a more logical workflow
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Strategic Overview", "⭐ Affinity Status", "🗺️ Action Playbook", "👤 Team Profiles", "🧠 Skill Analysis"])
 
-    # ========================== TAB 1: STRATEGIC OVERVIEW ==============================
+    # All dashboard tabs are placed here, exactly as they were before...
+    # (The full code for the tabs is omitted for brevity, but it is unchanged and included below in the full script)
     with tab1:
         st.header("📈 Strategic Overview")
+        # ... (rest of tab 1 code)
         col1, col2 = st.columns(2, gap="large")
         with col1:
             with st.container(border=True):
@@ -263,9 +259,9 @@ def main_app():
                 )
                 st.plotly_chart(fig_radar, use_container_width=True)
 
-    # ========================== TAB 2: AFFINITY STATUS ==============================
     with tab2:
         st.header("⭐ Affinity Status & Team Feedback")
+        # ... (rest of tab 2 code)
         if user_df.empty:
             st.error("This section requires the `userData.csv` file to be loaded correctly.")
         else:
@@ -321,10 +317,9 @@ def main_app():
                     st.markdown("**Comments & Specific Needs**")
                     st.dataframe(df_merged[['Name', 'Comments', 'Specific needs']].drop_duplicates(subset=['Name']), height=300, hide_index=True)
 
-
-    # ======================= TAB 3: ACTION PLAYBOOK ========================
     with tab3:
         st.header("🗺️ Action Playbook")
+        # ... (rest of tab 3 code)
         playbook_tab1, playbook_tab2, playbook_tab3 = st.tabs(["💡 Training Combo Generator", "👥 Group Builder", "🤝 Mentor Matchmaker"])
         with playbook_tab1:
             st.subheader("💡 Training Combo Generator")
@@ -411,10 +406,9 @@ def main_app():
                         recommendations = pd.merge(recommendations[['Name', 'Score']], person_summary[['Archetype']], on='Name', how='left')
                         st.dataframe(recommendations[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True, column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
 
-
-    # ========================== TAB 4: TEAM PROFILES ==============================
     with tab4:
         st.header("👤 Team Profiles")
+        # ... (rest of tab 4 code)
         col1, col2 = st.columns([1, 2], gap="large")
         with col1:
             with st.container(border=True):
@@ -470,9 +464,9 @@ def main_app():
                     if pd.notna(user_info.get('Other training')) and user_info.get('Other training', ''): st.info(f"**Other Training:** *{user_info.get('Other training', '').strip()}*")
                     if pd.notna(user_info.get('Comments')) and user_info.get('Comments', '').strip() not in ['No comment provided.', '']: st.info(f"**Personal Comment:** *\"{user_info.get('Comments', '').strip()}\"*")
 
-    # ========================== TAB 5: SKILL ANALYSIS ==============================
     with tab5:
         st.header("🧠 Skill Analysis")
+        # ... (rest of tab 5 code)
         subtab1, subtab2, subtab3 = st.tabs(["📊 Skill Distribution", "🏆 Talent Composition", "🕸️ Skill Correlation"])
         with subtab1:
             st.subheader("Deep Dive by Skill or Category")
@@ -534,8 +528,9 @@ def main_app():
                     fig_heatmap.update_layout(height=600, title="Skill Correlation Matrix")
                     st.plotly_chart(fig_heatmap, use_container_width=True)
 
+
 def login_page():
-    """Displays the login page and handles authentication."""
+    """Displays the login page and handles authentication using Streamlit Secrets."""
     st.title("🔐 Team Skills Hub Login")
     
     with st.form("login_form"):
@@ -544,7 +539,16 @@ def login_page():
         submitted = st.form_submit_button("Log In")
 
         if submitted:
-            if username == "admin" and password == "235412":
+            # Check if the secrets are configured
+            try:
+                correct_username = st.secrets["credentials"]["username"]
+                correct_password = st.secrets["credentials"]["password"]
+            except KeyError:
+                st.error("Secrets not configured on the server. Please contact the administrator.")
+                return
+
+            # Validate credentials
+            if username == correct_username and password == correct_password:
                 st.session_state.logged_in = True
                 st.rerun()  # Rerun the script to show the main app
             else:
@@ -553,12 +557,11 @@ def login_page():
 # ==============================================================================
 #                                  MAIN SCRIPT FLOW
 # ==============================================================================
-
-# Initialize session state for login
+# Initialize session state for login if it doesn't exist
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
-# Check login status and display appropriate page
+# Check login status and display the appropriate page
 if st.session_state.logged_in:
     main_app()
 else:
