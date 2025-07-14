@@ -1,0 +1,622 @@
+{
+  "skills": [
+    {
+      "id": 1,
+      "category": "Working with flat vectors from MM",
+      "title": "Illustration Composition with Vector Assets",
+      "description": "The ability to select and combine pre-existing vector assets (from Media Manager) to create a cohesive illustration. It involves an understanding of composition to logically arrange elements, and color theory to apply a consistent palette that aligns with the project's visual identity.",
+      "keywords": [
+        "asset combination",
+        "composition",
+        "layout",
+        "color theory",
+        "recoloring",
+        "visual storytelling"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers"
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Working with flat vectors from MM",
+      "title": "Design and Color Palette Adaptation (Light/Dark Mode)",
+      "description": "The ability to redesign a visual composition for a completely different background or theme (e.g., from dark to light mode). This goes beyond simple color swapping; it requires re-evaluating contrast, text legibility, and the visual weight of elements to work aesthetically in the new context.",
+      "keywords": [
+        "color adaptation",
+        "theme design",
+        "contrast management",
+        "legibility",
+        "recoloring",
+        "asset modification"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers",
+        "color picker",
+        "select same"
+      ]
+    },
+    {
+      "id": 3,
+      "category": "Working with flat vectors from MM",
+      "title": "Iconography Enhancement and Stylization",
+      "description": "The ability to elevate the visual quality of a design by replacing simple iconography with more sophisticated and stylized assets (e.g., 3D). This involves curating or creating icons that add depth, texture, and a more premium feel to the overall design.",
+      "keywords": [
+        "asset curation",
+        "icon design",
+        "stylization",
+        "3D effects",
+        "visual enhancement",
+        "masking"
+      ],
+      "tools": [
+        "move tool",
+        "pen tool",
+        "swatches",
+        "layers",
+        "clipping mask"
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Working with flat vectors from MM",
+      "title": "Visual Storytelling through Illustration",
+      "description": "The ability to translate an abstract concept (like \"talent loss\") into a visual scene or metaphor that communicates the message immediately and emotionally. It involves using characters and elements to build a narrative, effectively filling the slide space to capture attention.",
+      "keywords": [
+        "visual storytelling",
+        "conceptual illustration",
+        "composition",
+        "character posing",
+        "scene building"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers",
+        "color picker",
+        "select same"
+      ]
+    },
+    {
+      "id": 5,
+      "category": "Working with flat vectors from MM",
+      "title": "Infographic Creation and Complex Visual Storytelling",
+      "description": "The ability to synthesize information into a compelling visual narrative. This involves combining multiple asset types (maps, icons, text, custom shapes) and creating graphic elements (like timelines or diagrams) to guide the viewer. It requires a strong command of visual hierarchy and composition.",
+      "keywords": [
+        "infographics",
+        "data visualization",
+        "visual storytelling",
+        "composition",
+        "visual hierarchy",
+        "asset combination",
+        "custom shape creation"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers",
+        "color picker",
+        "select same",
+        "text tool",
+        "pen tool",
+        "node tool",
+        "power duplication"
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Working with flat vectors from MM",
+      "title": "Creating Visual Metaphors for Strategic Concepts",
+      "description": "The ability to conceptualize and execute a visual metaphor (like a mountain representing challenges and goals). This involves building a complex illustration where each element holds symbolic meaning that reinforces the core message.",
+      "keywords": [
+        "conceptual design",
+        "visual metaphor",
+        "illustration",
+        "composition",
+        "symbolism"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers",
+        "color picker",
+        "select same"
+      ]
+    },
+    {
+      "id": 7,
+      "category": "Working with flat vectors from MM",
+      "title": "Creating Scenes and Environments with Vectors",
+      "description": "The ability to construct a complete scene using vector characters and objects. This involves creating interaction between elements, establishing an environment, and applying effects like transparency or gradients to give a sense of depth and realism.",
+      "keywords": [
+        "scene creation",
+        "environmental design",
+        "composition",
+        "depth creation",
+        "transparency effects",
+        "gradient use"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers",
+        "color picker",
+        "select same",
+        "transform origin"
+      ]
+    },
+    {
+      "id": 8,
+      "category": "Working with flat vectors from MM",
+      "title": "Illustrating Processes and Journeys",
+      "description": "The ability to visualize a step-by-step process or journey. This involves using illustrations, icons, and connectors to show a logical sequence of events, customizing assets to fit each stage of the process.",
+      "keywords": [
+        "process visualization",
+        "journey mapping",
+        "flowcharting",
+        "information design",
+        "asset modification"
+      ],
+      "tools": [
+        "move tool",
+        "swatches",
+        "layers",
+        "color picker",
+        "select same",
+        "transform origin"
+      ]
+    },
+    {
+      "id": 9,
+      "category": "Working with flat vectors from MM",
+      "title": "Comprehensive Visual Redesign and Enhancement",
+      "description": "A complete visual overhaul of a slide. This involves not only updating graphics (using techniques like clipping masks for more dynamic visuals) but also restructuring the layout and typography to communicate the message more impactfully.",
+      "keywords": [
+        "visual redesign",
+        "layout improvement",
+        "typography",
+        "composition",
+        "masking",
+        "visual hierarchy"
+      ],
+      "tools": [
+        "move tool",
+        "layers",
+        "swatches",
+        "color picker",
+        "select same",
+        "clipping mask",
+        "pen tool",
+        "text tool"
+      ]
+    },
+    {
+      "id": 10,
+      "category": "Working with flat vectors from MM",
+      "title": "Content Integration within Illustrations (Masking)",
+      "description": "The ability to believably merge an image or graphic within another vector element (e.g., a picture inside a rocket). This requires mastery of clipping masks and node editing to adjust the container's shape, ensuring the content integrates seamlessly.",
+      "keywords": [
+        "clipping mask",
+        "masking",
+        "content integration",
+        "node editing",
+        "shape manipulation"
+      ],
+      "tools": [
+        "move tool",
+        "layers",
+        "swatches",
+        "color picker",
+        "select same",
+        "clipping mask",
+        "pen tool",
+        "node tool",
+        "text tool"
+      ]
+    },
+    {
+      "id": 11,
+      "category": "Working with flat vectors from MM",
+      "title": "Creative and Thematic Adaptation of Illustrations",
+      "description": "The ability to take a request and execute it with a creative and memorable twist (e.g., replacing humans with penguins). The skill lies in professionally executing this stylistic choice, adding personality while maintaining visual consistency.",
+      "keywords": [
+        "creative direction",
+        "thematic design",
+        "stylization",
+        "humor in design",
+        "asset replacement"
+      ],
+      "tools": [
+        "move tool",
+        "layers",
+        "swatches",
+        "color picker",
+        "select same",
+        "clipping mask",
+        "pen tool",
+        "node tool"
+      ]
+    },
+    {
+      "id": 12,
+      "category": "Recreating vectors from screenshots",
+      "title": "Creative Layout Design and Color Treatment",
+      "description": "The ability to transform a text-heavy slide into a visually engaging piece. This focuses on creating a dynamic layout, using geometric shapes, and applying color gradients and effects to generate visual interest and depth.",
+      "keywords": [
+        "layout design",
+        "gradient creation",
+        "color treatment",
+        "visual interest",
+        "shape composition"
+      ],
+      "tools": [
+        "move tool",
+        "layers",
+        "swatches",
+        "color picker",
+        "select same",
+        "clipping mask",
+        "pen tool",
+        "shapes tool",
+        "gradient tool"
+      ]
+    },
+    {
+      "id": 13,
+      "category": "Recreating vectors from screenshots",
+      "title": "Vector Recreation and Tracing",
+      "description": "The skill of reconstructing a low-resolution graphic (like a screenshot) into a clean, scalable, and editable vector artwork. Requires expert use of the Pen Tool for Bézier curves and boolean operations or the Shape Builder tool to construct complex shapes.",
+      "keywords": [
+        "vector tracing",
+        "vectorization",
+        "shape building",
+        "boolean operations",
+        "Bézier curve editing",
+        "recreation from raster"
+      ],
+      "tools": [
+        "pen tool",
+        "shapes",
+        "stroke panel",
+        "layer panel (e.g. opacity, locking layers)",
+        "shape builder tool",
+        "boolean operations"
+      ]
+    },
+    {
+      "id": 14,
+      "category": "Recreating vectors from screenshots",
+      "title": "Technical Diagram Recreation in Vector",
+      "description": "Similar to general vector tracing, but focused on the precision required for technical diagrams. The key skill is accuracy, recreating lines, shapes, and flows faithfully using guides and alignment tools for a professional vector representation.",
+      "keywords": [
+        "technical illustration",
+        "precision drawing",
+        "diagramming",
+        "vector tracing",
+        "boolean operations"
+      ],
+      "tools": [
+        "pen tool",
+        "shapes",
+        "stroke panel",
+        "layer panel (e.g. opacity, locking layers)",
+        "shape builder tool",
+        "boolean operations",
+        "gradients and transparency"
+      ]
+    },
+    {
+      "id": 15,
+      "category": "Recreating vectors from screenshots",
+      "title": "Iconography Stylization (Hand-Drawn Style)",
+      "description": "The ability to create or modify graphics to adopt a specific \"hand-drawn\" style. This is achieved by adjusting stroke properties to be irregular and modifying curves to be imperfect, applying a visual style that feels organic and less corporate.",
+      "keywords": [
+        "stylization",
+        "hand-drawn effect",
+        "stroke modification",
+        "custom illustration",
+        "bezier curve editing"
+      ],
+      "tools": [
+        "pen tool",
+        "node tool",
+        "shape builder",
+        "stroke panel"
+      ]
+    },
+    {
+      "id": 16,
+      "category": "Working with isometry from MM",
+      "title": "Integrating 2D Elements into Isometric Scenes",
+      "description": "The ability to take a flat element (like a logo) and correctly project it onto one of the surfaces (isometric planes) of an isometric illustration. This creates the illusion that the element is part of the scene, requiring the use of perspective or isometric plane tools.",
+      "keywords": [
+        "isometric design",
+        "perspective projection",
+        "asset integration",
+        "2D to 3D illusion",
+        "surface fitting"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 17,
+      "category": "Working with isometry from MM",
+      "title": "Composing and Enhancing Isometric Scenes",
+      "description": "The ability to add complexity and detail to an existing isometric illustration. This involves selecting and placing additional icons and sketches onto the correct planes so the scene feels more \"alive\" and informative without breaking the isometric perspective.",
+      "keywords": [
+        "isometric composition",
+        "scene enhancement",
+        "detail addition",
+        "asset placement"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 18,
+      "category": "Working with isometry from MM",
+      "title": "Editing and Annotating Isometric Graphics",
+      "description": "The ability to interpret visual feedback (like annotations) and perform precise edits on an isometric illustration. This involves modifying, adding, or removing specific elements while maintaining the style and perspective consistency of the graphic.",
+      "keywords": [
+        "isometric editing",
+        "feedback implementation",
+        "asset modification",
+        "precision editing"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 19,
+      "category": "Working with isometry from MM",
+      "title": "Storytelling in Isometric Environments",
+      "description": "Using an isometric scene to tell a story or compare two states. This involves modifying elements (a burning building vs. a normal one) to visually represent a problem and a solution, all within the same coherent isometric perspective.",
+      "keywords": [
+        "isometric storytelling",
+        "comparative illustration",
+        "conceptual design",
+        "scene modification"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 20,
+      "category": "Working with isometry from MM",
+      "title": "Recreating Isometric Scenes from Reference",
+      "description": "The ability to observe a screenshot or concept and rebuild it from scratch as a clean, professional isometric illustration. This involves setting up an isometric grid and drawing or placing each element on its corresponding plane to achieve the characteristic 3D effect.",
+      "keywords": [
+        "isometric recreation",
+        "vector illustration",
+        "grid-based design",
+        "3D illustration"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 21,
+      "category": "Recreating isometry from screenshot",
+      "title": "Complex Isometric Diagramming from Feedback",
+      "description": "The ability to decode complex annotations on a mock-up and translate them into a functional and visually clear isometric illustration. This requires not only isometric drawing skills but also interpretation skills to ensure the final diagram communicates the desired flow.",
+      "keywords": [
+        "isometric diagramming",
+        "information design",
+        "feedback interpretation",
+        "technical illustration"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 22,
+      "category": "Recreating isometry from screenshot",
+      "title": "Isometric Flowchart Creation",
+      "description": "Designing a process diagram using an isometric perspective. The skill involves representing a flow of information or production in a three-dimensional manner, using connectors and elements that respect the perspective to give a sense of space and structure.",
+      "keywords": [
+        "isometric flowcharting",
+        "process visualization",
+        "3D diagramming",
+        "information architecture"
+      ],
+      "tools": [
+        "iso panel",
+        "fit to plane",
+        "layers"
+      ]
+    },
+    {
+      "id": 23,
+      "category": "Recreating isometry from screenshot",
+      "title": "Converting Flat Design to Isometric",
+      "description": "The ability to take a 2D (flat) diagram and \"extrude\" or redraw it in an isometric perspective. This involves establishing an isometric grid and transforming each flat shape into its isometric equivalent, adding depth and a three-dimensional look.",
+      "keywords": [
+        "2D to isometric conversion",
+        "perspective drawing",
+        "grid-based design",
+        "shape transformation"
+      ],
+      "tools": [
+        "iso panel",
+        "shapes",
+        "pen tool"
+      ]
+    },
+    {
+      "id": 24,
+      "category": "Recreating isometry from screenshot",
+      "title": "High-Fidelity Isometric Recreation",
+      "description": "Reconstructing a complex isometric illustration from a reference image, paying close attention to details, colors, gradients, and transparencies so the final result is a high-quality, editable replica.",
+      "keywords": [
+        "high-fidelity recreation",
+        "isometric illustration",
+        "gradient use",
+        "transparency",
+        "detail-oriented design"
+      ],
+      "tools": [
+        "iso panel",
+        "shapes",
+        "pen tool",
+        "gradient tool",
+        "transparency tool"
+      ]
+    },
+    {
+      "id": 25,
+      "category": "Working with photos",
+      "title": "Object Isolation with Vector Masking",
+      "description": "The ability to precisely and non-destructively cut out an object from its background using vector masks. Using the Pen Tool to create the mask allows for maximum control over the edges, resulting in a clean, professional cutout.",
+      "keywords": [
+        "vector masking",
+        "background removal",
+        "object isolation",
+        "pen tool proficiency",
+        "non-destructive editing"
+      ],
+      "tools": [
+        "pen tool",
+        "node tool",
+        "vector masking"
+      ]
+    },
+    {
+      "id": 26,
+      "category": "Working with photos",
+      "title": "Photo Compositing and Blending",
+      "description": "The art of integrating multiple images so they appear as a single, coherent scene. This involves cutting out elements from different photos and then adjusting their color, light, and scale to blend them realistically.",
+      "keywords": [
+        "compositing",
+        "photo manipulation",
+        "background removal",
+        "selection refinement",
+        "color matching",
+        "blending"
+      ],
+      "tools": [
+        "pen tool",
+        "node tool",
+        "selection brush tool",
+        "vector masking",
+        "raster masking",
+        "refining selection"
+      ]
+    },
+    {
+      "id": 27,
+      "category": "Working with photos",
+      "title": "Basic Background Removal",
+      "description": "A fundamental photo editing skill: isolating the main subject of an image by removing the background. This can be done with various tools to prepare the image for use in other designs.",
+      "keywords": [
+        "background removal",
+        "object isolation",
+        "image masking"
+      ],
+      "tools": [
+        "pen tool",
+        "node tool",
+        "vector masking"
+      ]
+    },
+    {
+      "id": 28,
+      "category": "Combining vectors with photos",
+      "title": "Selective Color Correction in Photos",
+      "description": "The ability to modify the color of a specific part of an image without affecting the rest. This is achieved by making a precise selection of the object and then applying non-destructive color adjustments (like HSL) to match the object's color to a brand palette.",
+      "keywords": [
+        "selective color correction",
+        "color matching",
+        "image masking",
+        "non-destructive adjustment layers"
+      ],
+      "tools": [
+        "selection brush tool",
+        "HSL",
+        "rasterizing image",
+        "blending modes",
+        "fill layer (layer menu)"
+      ]
+    },
+    {
+      "id": 29,
+      "category": "Combining vectors with photos",
+      "title": "Brand Neutralization and Mockup Adaptation",
+      "description": "The ability to take a mockup or photo with a specific brand and remove or replace all branding elements with neutral or alternative ones. This requires a combination of masking, cloning, digital painting, and overlaying new graphic elements.",
+      "keywords": [
+        "de-branding",
+        "mockup editing",
+        "asset replacement",
+        "photo manipulation",
+        "vector overlay"
+      ],
+      "tools": [
+        "selection brush tool",
+        "HSL",
+        "rasterizing image",
+        "blending modes",
+        "fill layer (layer menu)"
+      ]
+    },
+    {
+      "id": 30,
+      "category": "Combining vectors with photos",
+      "title": "High-End Photo and Text Composition",
+      "description": "Creating a high-quality visual composition that merges an impactful photograph with professional typography. The skill is not just in choosing the right photo, but in how the text is integrated—its hierarchy, color, and interaction with the image to create a premium result.",
+      "keywords": [
+        "composition",
+        "typography",
+        "art direction",
+        "text on image",
+        "visual hierarchy"
+      ],
+      "tools": [
+        "text tool",
+        "convert to curves",
+        "node tool"
+      ]
+    },
+    {
+      "id": 31,
+      "category": "Combining vectors with photos",
+      "title": "Original Graphic Creation from Copyrighted References",
+      "description": "The ability to analyze a copyrighted reference and, instead of copying it, create a new, original design that captures the same essence, structure, and purpose. This involves a full creative process: conceptualization, icon and layout design, and execution.",
+      "keywords": [
+        "creative interpretation",
+        "concept development",
+        "original illustration",
+        "layout design",
+        "copyright-safe design"
+      ],
+      "tools": [
+        "pen tool",
+        "node tool",
+        "layers panel",
+        "clipping mask",
+        "working with shapes"
+      ]
+    }
+  ]
+}
