@@ -1,5 +1,5 @@
-# --- app_final_v7_golden_master.py ---
-# Versión 7.0: Golden Master - Mantiene la estructura de la v6.6 y la adapta al nuevo sistema de datos.
+# --- app_final_v8.3_keyerror_fix_scheduler.py ---
+# Versión 8.3: Corrige el KeyError de 'Scheduler tag' en la pestaña Team DNA.
 
 import streamlit as st
 import pandas as pd
@@ -12,84 +12,79 @@ import matplotlib.pyplot as plt
 import re
 
 # ==============================================================================
+#                                  CONFIGURATION TOGGLE
+# ==============================================================================
+# Set to True to bypass the login screen for development.
+# Set to False to enable the st.secrets login for production.
+DEVELOPMENT_MODE = True
+
+# ==============================================================================
 #                                  PAGE CONFIG
 # ==============================================================================
 st.set_page_config(
-    page_title="Team Skills Hub 7.0",
+    page_title="Team Skills Hub 8.3",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ==============================================================================
-#                                  NUEVO DATA ENGINE
+#                                  DATA ENGINE
 # ==============================================================================
 @st.cache_data
 def load_and_process_data(user_csv_path, tasks_json_path):
-    """
-    Nuevo motor de datos unificado. Lee userData.csv y tasks.json,
-    y devuelve DataFrames compatibles con la lógica de la v6.6.
-    """
-    # 1. Cargar Tasks desde JSON
+    # Carga de datos
     try:
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
         tasks_df.rename(columns={'title': 'Task', 'id': 'task_id'}, inplace=True)
     except Exception as e:
         st.error(f"Error crítico al leer tasks.json: {e}"); return None
 
-    # 2. Cargar y limpiar User Data desde CSV
     try:
         user_df = pd.read_csv(user_csv_path, sep=';', encoding='utf-8-sig')
     except Exception as e:
         st.error(f"Error crítico al leer userData.csv: {e}"); return None
 
+    # Limpieza y renombrado
     user_df.columns = user_df.columns.str.strip()
     user_df.rename(columns={
         'BPS': 'Name',
-        'Specific Needs': 'Comments', # Usaremos 'Comments' como el campo principal de feedback
+        'Specific Needs': 'Comments',
         'Has received Affinity training of McK?': 'Has received Affinity training of McK?',
         'License Expiration ': 'License Expiration'
     }, inplace=True)
     user_df.dropna(subset=['Name'], inplace=True)
 
-    # Limpieza de columnas booleanas y de fecha
+    # Conversión de tipos robusta
     yes_values = ['yes', 'si', 'true', '1']
-    if 'Active License' in user_df.columns:
-        user_df['Active License'] = user_df['Active License'].astype(str).str.strip().str.lower().isin(yes_values)
-    if 'Has received Affinity training of McK?' in user_df.columns:
-         user_df['Has received Affinity training of McK?'] = user_df['Has received Affinity training of McK?'].astype(str).str.strip().str.lower().isin(yes_values)
+    for col in ['Active License', 'Has received Affinity training of McK?', 'Scheduler tag']:
+        if col in user_df.columns:
+            user_df[col] = user_df[col].astype(str).str.strip().str.lower().isin(yes_values)
+        else:
+            user_df[col] = False 
+            
     if 'License Expiration' in user_df.columns:
         user_df['License Expiration'] = pd.to_datetime(user_df['License Expiration'], errors='coerce', dayfirst=True)
 
-    # Rellenar NaNs en columnas de texto para evitar errores
     for col in user_df.select_dtypes(include=['object']).columns:
         user_df[col] = user_df[col].fillna('').astype(str).str.strip()
         
-    # 3. Transformar (unpivot) los scores
+    # Unpivot y procesamiento de scores
     task_cols = [f'Task {i}' for i in range(1, 32)]
     id_vars = [col for col in user_df.columns if col not in task_cols]
-    
     df_long = pd.melt(user_df, id_vars=id_vars, value_vars=task_cols, var_name='task_id_str', value_name='Score')
     
-    # 4. Procesar scores y IDs
     df_long['task_id'] = df_long['task_id_str'].str.extract(r'(\d+)').astype(int)
-    
-    # Calcular errores de parsing antes de la conversión
     original_scores = df_long['Score'].dropna()
     numeric_scores = pd.to_numeric(original_scores.astype(str).str.replace('%', '', regex=False).str.strip(), errors='coerce')
     parsing_errors = numeric_scores.isnull().sum()
-    
     df_long['Score'] = numeric_scores / 100
     df_long.dropna(subset=['Score'], inplace=True)
 
-    # 5. Fusionar con la data de tasks
+    # Fusión y creación de columnas de compatibilidad
     df_merged = pd.merge(df_long, tasks_df, on='task_id', how='left')
-
-    # 6. Crear columnas de compatibilidad con el código v6.6
     df_merged.rename(columns={'category': 'Category'}, inplace=True)
-    df_merged['Skill'] = df_merged['Category'] # Usamos la categoría como el 'Skill' principal
+    df_merged['Skill'] = df_merged['Category']
     df_merged['Task_Prefixed'] = '[' + df_merged['Category'] + '] ' + df_merged['Task']
-    
-    # Renombrar 'Comments' a 'Specific needs' en el df fusionado para compatibilidad
     if 'Comments' in df_merged.columns:
         df_merged.rename(columns={'Comments': 'Specific needs'}, inplace=True)
 
@@ -97,12 +92,72 @@ def load_and_process_data(user_csv_path, tasks_json_path):
 
     return {
         'merged_df': df_merged,
-        'user_df': user_df, # Devolvemos el user_df limpio para la pestaña de Affinity
+        'user_df': user_df,
         'total_count': total_names_in_file,
         'parsing_errors': int(parsing_errors)
     }
 
-# --- Funciones de análisis y computación (sin cambios desde v6.6) ---
+# --- ANALYTICS ENGINE (CORREGIDO) ---
+@st.cache_data
+def compute_analytics(_df, _user_df):
+    df = _df.copy()
+    user_df = _user_df.copy()
+    analytics = {}
+    if df.empty: return analytics
+    
+    # Análisis de Personas (Arquetipos)
+    person_summary = df.groupby('Name')['Score'].agg(['mean', 'std']).rename(columns={'mean': 'Avg Score', 'std': 'Volatility'})
+    median_v, median_p = person_summary['Volatility'].median(), person_summary['Avg Score'].median()
+    def get_archetype(row):
+        if pd.isna(row['Volatility']): return "🎯 Needs Support"
+        if row['Avg Score'] >= median_p and row['Volatility'] <= median_v: return "🏆 Versatile Leader"
+        if row['Avg Score'] >= median_p and row['Volatility'] > median_v: return "🌟 Niche Specialist"
+        if row['Avg Score'] < median_p and row['Volatility'] <= median_v: return "🌱 Consistent Learner"
+        return "🎯 Needs Support"
+    person_summary['Archetype'] = person_summary.apply(get_archetype, axis=1)
+    
+    person_summary = person_summary.join(user_df.set_index('Name')[['Team Leader', 'Scheduler tag']], how='left')
+    analytics['person_summary'] = person_summary
+    
+    # Análisis de Tareas (Riesgo y Expertos)
+    task_summary = df.groupby('Task_Prefixed').agg(
+        Avg_Score=('Score', 'mean'),
+        Expert_Count=('Score', lambda s: (s >= 0.8).sum()),
+        Beginner_Count=('Score', lambda s: (s < 0.4).sum())
+    )
+    task_summary['Risk Index'] = (task_summary['Beginner_Count'] + 1) / (task_summary['Expert_Count'] + 1)
+    task_summary['SPOF'] = task_summary['Expert_Count'] == 1
+    analytics['risk_radar'] = task_summary.sort_values(by='Risk Index', ascending=False)
+    
+    # Mapeo de riesgo de expiración de licencia
+    experts_df = df[df['Score'] >= 0.8][['Name', 'Task_Prefixed']]
+    experts_with_exp = pd.merge(experts_df, user_df[['Name', 'License Expiration']], on='Name', how='left')
+    ninety_days_from_now = datetime.now() + pd.Timedelta(days=90)
+    expiring_experts = experts_with_exp[
+        (experts_with_exp['License Expiration'].notna()) &
+        (experts_with_exp['License Expiration'] < ninety_days_from_now)
+    ]
+    tasks_with_exp_risk = expiring_experts['Task_Prefixed'].unique()
+    task_summary['Expiration Risk'] = task_summary.index.isin(tasks_with_exp_risk)
+    analytics['risk_matrix'] = task_summary
+    
+    # Identificar "Talent Pipeline"
+    critical_tasks = task_summary[task_summary['Avg_Score'] < 0.6].index
+    pipeline_candidates = df[df['Task_Prefixed'].isin(critical_tasks) & df['Score'].between(0.6, 0.79)]
+    pipeline_candidates = pd.merge(pipeline_candidates, person_summary.reset_index()[['Name', 'Archetype']], on='Name')
+    analytics['talent_pipeline'] = pipeline_candidates[['Name', 'Archetype', 'Task_Prefixed', 'Score']].sort_values('Score', ascending=False)
+    
+    # Otros análisis
+    task_avg = df.groupby('Task_Prefixed')['Score'].mean(); hard_tasks = task_avg[task_avg < 0.6].index
+    mid_tier = person_summary[(person_summary['Avg Score'] >= 0.5) & (person_summary['Avg Score'] < 0.8)].index
+    analytics['hidden_stars'] = df[(df['Name'].isin(mid_tier)) & (df['Task_Prefixed'].isin(hard_tasks)) & (df['Score'] >= 0.9)].copy()
+    df_adj = df.copy(); df_adj['Difficulty Weight'] = df_adj['Task_Prefixed'].map(1 - task_avg); df_adj['Adjusted Score'] = df_adj['Score'] * df_adj['Difficulty Weight']
+    analytics['adjusted_ranking'] = pd.DataFrame(df_adj.groupby('Name')['Adjusted Score'].sum().sort_values(ascending=False)).reset_index()
+    skill_pivot = df.pivot_table(index='Name', columns='Skill', values='Score', aggfunc='mean').fillna(df['Score'].mean())
+    analytics['skill_correlation'] = skill_pivot.corr()
+    
+    return analytics
+
 @st.cache_data
 def analyze_comment_themes(df_comments):
     themes = {
@@ -115,36 +170,6 @@ def analyze_comment_themes(df_comments):
     for theme, pattern in themes.items(): theme_counts[theme] = len(re.findall(pattern, all_comments, re.IGNORECASE))
     return pd.DataFrame.from_dict(theme_counts, orient='index', columns=['Mentions']).sort_values('Mentions', ascending=False)
 
-@st.cache_data
-def compute_analytics(_df):
-    df = _df.copy(); analytics = {}
-    if df.empty: return analytics
-    person_summary = df.groupby('Name')['Score'].agg(['mean', 'std']).rename(columns={'mean': 'Avg Score', 'std': 'Volatility'})
-    person_summary['Rank'] = person_summary['Avg Score'].rank(ascending=False, method='min').astype(int)
-    median_v, median_p = person_summary['Volatility'].median(), person_summary['Avg Score'].median()
-    def get_archetype(row):
-        if pd.isna(row['Volatility']): return "🎯 Needs Support"
-        if row['Avg Score'] >= median_p and row['Volatility'] <= median_v: return "🏆 Versatile Leader"
-        if row['Avg Score'] >= median_p and row['Volatility'] > median_v: return "🌟 Niche Specialist"
-        if row['Avg Score'] < median_p and row['Volatility'] <= median_v: return "🌱 Consistent Learner"
-        return "🎯 Needs Support"
-    person_summary['Archetype'] = person_summary.apply(get_archetype, axis=1)
-    analytics['person_summary'] = person_summary
-    task_summary = df.groupby('Task_Prefixed')['Score'].agg(['mean', 'count']).rename(columns={'mean': 'Avg Score'})
-    task_summary['Experts (>=80%)'] = df[df['Score'] >= 0.8].groupby('Task_Prefixed')['Name'].nunique()
-    task_summary['Beginners (<40%)'] = df[df['Score'] < 0.4].groupby('Task_Prefixed')['Name'].nunique()
-    task_summary.fillna(0, inplace=True); task_summary['Risk Index'] = (task_summary['Beginners (<40%)'] + 1) / (task_summary['Experts (>=80%)'] + 1)
-    analytics['risk_radar'] = task_summary.sort_values(by='Risk Index', ascending=False)
-    task_avg = df.groupby('Task_Prefixed')['Score'].mean(); hard_tasks = task_avg[task_avg < 0.6].index
-    mid_tier = person_summary[(person_summary['Avg Score'] >= 0.5) & (person_summary['Avg Score'] < 0.8)].index
-    analytics['hidden_stars'] = df[(df['Name'].isin(mid_tier)) & (df['Task_Prefixed'].isin(hard_tasks)) & (df['Score'] >= 0.9)].copy()
-    df_adj = df.copy(); df_adj['Difficulty Weight'] = df_adj['Task_Prefixed'].map(1 - task_avg); df_adj['Adjusted Score'] = df_adj['Score'] * df_adj['Difficulty Weight']
-    adj_ranking = df_adj.groupby('Name')['Adjusted Score'].sum().sort_values(ascending=False)
-    analytics['adjusted_ranking'] = pd.DataFrame(adj_ranking).reset_index()
-    skill_pivot = df.pivot_table(index='Name', columns='Skill', values='Score', aggfunc='mean').fillna(df['Score'].mean())
-    analytics['skill_correlation'] = skill_pivot.corr()
-    return analytics
-
 
 def main_app():
     st.sidebar.title("🚀 Team Skills Hub")
@@ -152,7 +177,6 @@ def main_app():
     st.sidebar.info("A strategic platform for talent intelligence and team development.")
     st.sidebar.markdown("---")
     
-    # --- Usa el nuevo motor de datos ---
     data_load_result = load_and_process_data("userData.csv", "tasks.json")
     if data_load_result is None: st.error("Dashboard cannot be loaded. Check data files."); st.stop()
     
@@ -164,24 +188,22 @@ def main_app():
     
     if df_merged.empty: st.warning("No participants with valid scores were found."); st.stop()
     
-    analytics = compute_analytics(df_merged)
+    analytics = compute_analytics(df_merged, user_df)
     person_summary = analytics.get('person_summary', pd.DataFrame())
     risk_radar = analytics.get('risk_radar', pd.DataFrame())
+    risk_matrix = analytics.get('risk_matrix', pd.DataFrame())
+    talent_pipeline = analytics.get('talent_pipeline', pd.DataFrame())
 
     st.title("🚀 Team Skills & Affinity Hub")
-    with st.expander("ℹ️ How to Use This Dashboard", expanded=False):
-        st.markdown("""
-            - **📈 Strategic Overview:** Quick diagnostic of the team's skill health and key risks.
-            - **⭐ Affinity Status:** Operational view of licenses, training, and software status.
-            - **🗺️ Action Playbook:** Design high-impact training sessions and create smart groups.
-            - **👤 Team Profiles:** Explore and compare the detailed profile of each team member.
-            - **🧠 Skill Analysis:** Deep dive into talent composition and skill performance.
-        """)
+    
+    tab_list = [
+        "📈 Strategic Overview", "⭐ Affinity Status", "🗺️ Action Playbook", 
+        "👤 Team Profiles", "🧠 Skill Analysis", "🧬 Team DNA & Dynamics",
+        "🔭 Risk & Opportunity Forecaster"
+    ]
+    tabs = st.tabs(tab_list)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Strategic Overview", "⭐ Affinity Status", "🗺️ Action Playbook", "👤 Team Profiles", "🧠 Skill Analysis"])
-
-    # ========================== TAB 1: STRATEGIC OVERVIEW (Sin cambios) ==============================
-    with tab1:
+    with tabs[0]: # Strategic Overview
         st.header("📈 Strategic Overview")
         col1, col2 = st.columns(2, gap="large")
         with col1:
@@ -215,25 +237,29 @@ def main_app():
             with st.container(border=True):
                 st.subheader("🚨 Skill Risk Radar")
                 st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
-                for index, row in risk_radar.head(5).iterrows(): st.metric(label=row.name, value=f"{row['Avg Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
+                for index, row in risk_radar.head(5).iterrows(): st.metric(label=row.name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
         with col2:
             with st.container(border=True):
                 st.subheader("📡 Comparative Risk Profile")
                 st.caption("Compares top 5 risk areas across key metrics.")
                 risk_data_head = risk_radar.head(5).reset_index()
-                fig_radar = go.Figure()
-                categories = ['Avg Score', 'Risk Index', 'Experts (>=80%)', 'Beginners (<40%)']
-                normalized_data = risk_data_head[categories].copy()
-                for cat in categories:
+                
+                categories = ['Avg_Score', 'Risk Index', 'Expert_Count', 'Beginner_Count']
+                category_labels = {'Avg_Score': 'Avg Score', 'Risk Index': 'Risk Index', 'Expert_Count': 'Experts (>=80%)', 'Beginner_Count': 'Beginners (<40%)'}
+                
+                valid_categories = [cat for cat in categories if cat in risk_data_head.columns]
+                normalized_data = risk_data_head[valid_categories].copy()
+                for cat in valid_categories:
                      if (risk_radar[cat].max() - risk_radar[cat].min()) > 0: normalized_data[cat] = (risk_data_head[cat] - risk_radar[cat].min()) / (risk_radar[cat].max() - risk_radar[cat].min())
                      else: normalized_data[cat] = 0.5
+                
+                fig_radar = go.Figure()
                 for i, row in risk_data_head.iterrows():
-                    fig_radar.add_trace(go.Scatterpolar(r=normalized_data.loc[i, categories].values, theta=categories, fill='toself', name=row['Task_Prefixed'][:40] + "...",
-                        hovertemplate=f"<b>{row['Task_Prefixed']}</b><br>Risk Index: {row['Risk Index']:.2f}<br>Avg Score: {row['Avg Score']:.1%}<extra></extra>"))
+                    fig_radar.add_trace(go.Scatterpolar(r=normalized_data.loc[i, valid_categories].values, theta=[category_labels.get(cat, cat) for cat in valid_categories], fill='toself', name=row['Task_Prefixed'][:40] + "...",
+                        hovertemplate=f"<b>{row['Task_Prefixed']}</b><br>Risk Index: {row['Risk Index']:.2f}<br>Avg Score: {row['Avg_Score']:.1%}<extra></extra>"))
                 fig_radar.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 1])), showlegend=True, height=350, margin=dict(l=40, r=40, t=60, b=40)); st.plotly_chart(fig_radar, use_container_width=True)
 
-    # ========================== TAB 2: AFFINITY STATUS (Adaptado) ==============================
-    with tab2:
+    with tabs[1]: # Affinity Status
         st.header("⭐ Affinity Status & Team Feedback")
         with st.container(border=True):
             st.subheader("📊 Overall Software Status")
@@ -249,11 +275,12 @@ def main_app():
             if not exp_df.empty:
                 exp_df['Days Left'] = (exp_df['License Expiration'] - today).dt.days
                 exp_df = exp_df[exp_df['Days Left'] > 0]
-                exp_df['Start'] = today
-                fig_timeline = px.timeline(exp_df, x_start="Start", x_end="License Expiration", y="Name", text="Days Left")
-                st.plotly_chart(fig_timeline, use_container_width=True)
-            else:
-                st.success("✅ No upcoming license expirations found.")
+                if not exp_df.empty:
+                    exp_df['Start'] = today
+                    fig_timeline = px.timeline(exp_df, x_start="Start", x_end="License Expiration", y="Name", text="Days Left")
+                    st.plotly_chart(fig_timeline, use_container_width=True)
+                else: st.success("✅ No upcoming license expirations found.")
+            else: st.success("✅ No license expiration data found.")
 
         with st.container(border=True):
             st.subheader("🗣️ Team Feedback Analysis")
@@ -261,16 +288,15 @@ def main_app():
             with comment_col1:
                 st.markdown("**Key Themes & Word Cloud**")
                 all_comments_df = user_df['Comments'].dropna()
-                if not all_comments_df.empty:
+                if not all_comments_df.empty and not all_comments_df.str.strip().eq('').all():
                     theme_counts = analyze_comment_themes(all_comments_df)
                     fig_themes = px.bar(theme_counts, x='Mentions', y=theme_counts.index, orientation='h', text_auto=True)
-                    fig_themes.update_layout(showlegend=False, yaxis_title=None, height=300, margin=dict(t=20, b=20)); st.plotly_chart(fig_themes, use_container_width=True)
+                    st.plotly_chart(fig_themes, use_container_width=True)
             with comment_col2:
                 st.markdown("**Raw Comments**")
                 st.dataframe(user_df[['Name', 'Comments']].drop_duplicates(), height=300, hide_index=True)
 
-    # ========================== TAB 3: ACTION PLAYBOOK (Sin cambios) ==============================
-    with tab3:
+    with tabs[2]: # Action Playbook
         st.header("🗺️ Action Playbook")
         playbook_tab1, playbook_tab2, playbook_tab3 = st.tabs(["💡 Training Combo Generator", "👥 Group Builder", "🤝 Mentor Matchmaker"])
         with playbook_tab1:
@@ -329,8 +355,7 @@ def main_app():
                         recommendations = pd.merge(recommendations[['Name', 'Score']], person_summary[['Archetype']], on='Name', how='left')
                         st.dataframe(recommendations[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True, column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
 
-    # ========================== TAB 4: TEAM PROFILES (Mejorado) ==============================
-    with tab4:
+    with tabs[3]: # Team Profiles
         st.header("👤 Team Profiles")
         col1, col2 = st.columns([1, 2], gap="large")
         with col1:
@@ -338,7 +363,8 @@ def main_app():
                 st.subheader("📇 Team Roster")
                 all_user_names_list = sorted(list(user_df['Name'].unique()))
                 selected_person = st.selectbox("Select a Team Member", all_user_names_list, label_visibility="collapsed")
-                ranking_df = person_summary.sort_values('Rank').reset_index()
+                ranking_df = person_summary.reset_index().sort_values('Avg Score', ascending=False)
+                ranking_df['Rank'] = ranking_df['Avg Score'].rank(method='min', ascending=False).astype(int)
                 merged_ranking = pd.merge(user_df[['Name']], ranking_df, on='Name', how='left')
                 merged_ranking['Assessed'] = merged_ranking['Name'].isin(set(df_merged['Name'].unique()))
                 st.dataframe(merged_ranking, height=750, hide_index=True, column_config={"Assessed": st.column_config.CheckboxColumn("Assessed?", disabled=True), "Avg Score": st.column_config.ProgressColumn("Avg Score", format="%.1f%%", min_value=0, max_value=1)})
@@ -348,12 +374,13 @@ def main_app():
                 if selected_person not in set(df_merged['Name'].unique()): st.warning(f"**{selected_person} has not completed the self-assessment.**")
                 else:
                     person_stats = person_summary.loc[selected_person]; person_data = df_merged[df_merged['Name'] == selected_person].copy()
-                    c1, c2, c3 = st.columns(3); c1.metric("Overall Rank", f"#{int(person_stats['Rank'])}"); c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}"); c3.metric("Archetype", person_stats['Archetype'])
+                    rank_val = person_summary.reset_index().sort_values('Avg Score', ascending=False).set_index('Name').index.get_loc(selected_person) + 1
+                    c1, c2, c3 = st.columns(3); c1.metric("Overall Rank", f"#{rank_val}"); c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}"); c3.metric("Archetype", person_stats['Archetype'])
                     st.divider()
                     team_avg = df_merged.groupby('Category')['Score'].mean(); person_avg = person_data.groupby('Category')['Score'].mean().reindex(team_avg.index, fill_value=0)
                     fig_radar = go.Figure(); fig_radar.add_trace(go.Scatterpolar(r=person_avg.values, theta=person_avg.index, fill='toself', name=f'{selected_person}'))
                     fig_radar.add_trace(go.Scatterpolar(r=team_avg.values, theta=team_avg.index, fill='toself', name='Team Avg', opacity=0.6))
-                    fig_radar.update_layout(title="Performance vs. Team Average", height=350, margin=dict(l=40, r=40, t=60, b=40)); st.plotly_chart(fig_radar, use_container_width=True)
+                    st.plotly_chart(fig_radar, use_container_width=True)
                     st.markdown("**Strengths & Development Areas**")
                     person_skills = person_data.sort_values('Score', ascending=False).drop_duplicates(subset=['Task_Prefixed'])
                     sub_col1, sub_col2 = st.columns(2)
@@ -363,7 +390,7 @@ def main_app():
             with st.expander("📄 View Full Software & Feedback Details", expanded=False):
                 user_info = user_df[user_df['Name'] == selected_person].iloc[0]
                 st.markdown(f"**Team Leader:** {user_info.get('Team Leader', 'N/A')}  |  **Grid:** {user_info.get('Grid', 'N/A')}")
-                st.markdown(f"**Scheduler Tag:** {'Yes' if user_info.get('Scheduler tag') == 'Yes' else 'No'}")
+                st.markdown(f"**Scheduler Tag:** {'Yes' if user_info.get('Scheduler tag') else 'No'}")
                 st.divider()
                 col1, col2 = st.columns(2)
                 with col1: 
@@ -375,8 +402,7 @@ def main_app():
                     st.info(f"**Confidence w/ MM:** {user_info.get('Confidence with MM', 'N/A')}")
                     st.warning(f"**Comments:** {user_info.get('Comments', 'N/A')}")
 
-    # ========================== TAB 5: SKILL ANALYSIS (Sin cambios) ==============================
-    with tab5:
+    with tabs[4]: # Skill Analysis
         st.header("🧠 Skill Analysis")
         subtab1, subtab2, subtab3 = st.tabs(["📊 Skill Distribution", "🏆 Talent Composition", "🕸️ Skill Correlation"])
         with subtab1:
@@ -416,6 +442,77 @@ def main_app():
                     fig_heatmap = px.imshow(skill_corr_matrix, text_auto=".2f", aspect="auto", color_continuous_scale='RdYlBu'); fig_heatmap.update_layout(height=600, title="Skill Correlation Matrix")
                     st.plotly_chart(fig_heatmap, use_container_width=True)
 
+    with tabs[5]: # Team DNA & Dynamics
+        st.header("🧬 Team DNA & Dynamics")
+        st.info("Análisis de la composición y características únicas de cada equipo.")
+
+        st.subheader("🔬 Huella Digital de Habilidades por Equipo")
+        all_teams = sorted([t for t in person_summary['Team Leader'].unique() if t])
+        if all_teams:
+            selected_team = st.selectbox("Seleccione un Líder de Equipo para analizar", all_teams)
+            if selected_team:
+                team_members = person_summary[person_summary['Team Leader'] == selected_team].index
+                team_data = df_merged[df_merged['Name'].isin(team_members)]
+                team_fingerprint = team_data.groupby('Category')['Score'].quantile(0.75)
+                fig = go.Figure()
+                fig.add_trace(go.Scatterpolar(r=team_fingerprint.values, theta=team_fingerprint.index, fill='toself', name='Competencia Avanzada (Percentil 75)'))
+                fig.update_layout(title=f"Huella Digital de Habilidades - Equipo de {selected_team}", polar=dict(radialaxis=dict(visible=True, range=[0, 1])))
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No hay datos de líderes de equipo para analizar.")
+
+        st.divider()
+        
+        st.subheader("📊 Distribución de Arquetipos por Equipo")
+        if 'Team Leader' in person_summary.columns and not person_summary['Team Leader'].isnull().all():
+            archetype_dist = person_summary.groupby(['Team Leader', 'Archetype']).size().unstack(fill_value=0)
+            archetype_dist_pct = archetype_dist.apply(lambda x: x*100/sum(x), axis=1)
+            fig = px.bar(archetype_dist_pct, x=archetype_dist_pct.index, y=archetype_dist_pct.columns, title="Composición de Arquetipos por Equipo (%)", template="plotly_white")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        st.divider()
+        
+        st.subheader("🏷️ Análisis de 'Scheduler Tag'")
+        col1, col2 = st.columns(2)
+        
+        # CORRECCIÓN APLICADA AQUÍ
+        scheduler_data = df_merged.copy() 
+        
+        with col1:
+            st.markdown("**Perfil de Habilidad (CON Scheduler Tag)**")
+            with_tag_profile = scheduler_data[scheduler_data['Scheduler tag'] == True].groupby('Category')['Score'].mean()
+            if not with_tag_profile.empty: st.plotly_chart(px.bar(with_tag_profile, orientation='h'), use_container_width=True)
+            else: st.info("No hay datos para personas con 'Scheduler Tag'.")
+        with col2:
+            st.markdown("**Perfil de Habilidad (SIN Scheduler Tag)**")
+            without_tag_profile = scheduler_data[scheduler_data['Scheduler tag'] == False].groupby('Category')['Score'].mean()
+            if not without_tag_profile.empty: st.plotly_chart(px.bar(without_tag_profile, orientation='h'), use_container_width=True)
+            else: st.info("No hay datos para personas sin 'Scheduler Tag'.")
+
+    with tabs[6]: # Risk & Opportunity Forecaster
+        st.header("🔭 Risk & Opportunity Forecaster")
+        st.info("Identificación proactiva de riesgos de talento y oportunidades de desarrollo.")
+        
+        st.subheader("🚨 Matriz de Riesgo de Talento")
+        def highlight_risks(row):
+            styles = [''] * len(row)
+            if row['SPOF']: styles[row.index.get_loc('Expert_Count')] = 'background-color: orange'
+            if row['Expiration Risk']: styles[row.index.get_loc('Expiration Risk')] = 'background-color: red; color: white'
+            return styles
+        risk_df_display = risk_matrix.reset_index()[['Task_Prefixed', 'Avg_Score', 'Expert_Count', 'SPOF', 'Expiration Risk']]
+        st.dataframe(risk_df_display.style.apply(highlight_risks, axis=1).format({'Avg_Score': "{:.1%}"}), use_container_width=True)
+        st.caption("🔶 Naranja: Punto Único de Fallo (SPOF). 🔴 Rojo: El experto clave tiene una licencia que expira pronto.")
+        
+        st.divider()
+        
+        st.subheader("🌱 Cantera de Talento (Talent Pipeline)")
+        st.caption("Personas con alto potencial en áreas críticas para el equipo. Son los candidatos ideales para formación de nivelación.")
+        if not talent_pipeline.empty:
+            st.dataframe(talent_pipeline, column_config={"Score": st.column_config.ProgressColumn("Confianza Actual", format="%.1f%%", min_value=0, max_value=1)}, use_container_width=True, hide_index=True)
+        else:
+            st.success("✅ No se han identificado candidatos para la cantera de talento en este momento.")
+
+
 def login_page():
     st.title("🔐 Team Skills Hub Login")
     with st.form("login_form"):
@@ -430,6 +527,16 @@ def login_page():
                 else: st.error("Incorrect username or PIN. Please try again.")
             except KeyError: st.error("Secrets not configured on the server. Please contact the administrator.")
 
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
-if st.session_state.logged_in: main_app()
-else: login_page()
+
+# ==============================================================================
+#                                  MAIN SCRIPT FLOW
+# ==============================================================================
+if DEVELOPMENT_MODE:
+    main_app()
+else:
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+    if st.session_state.logged_in:
+        main_app()
+    else:
+        login_page()
