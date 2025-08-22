@@ -3,10 +3,11 @@
 # =============================
 
 import streamlit as st
+import pandas as pd
 from pathlib import Path
 from config import DEVELOPMENT_MODE
 from data_engine import load_and_process_data
-from analytics_engine import compute_analytics
+from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
     render_gap_radar,
     render_opportunity_lens,
@@ -41,8 +42,19 @@ def main_app():
         st.warning("No participants with valid assessment scores were found.")
         st.stop()
 
+    # --- Controller Logic: Prepare all analytics before rendering ---
     analytics = compute_analytics(df_merged, user_df)
+    
+    # Pre-compute comment themes to pass to the UI component
+    all_comments = user_df['Comments'].dropna().str.strip()
+    all_comments = all_comments[all_comments != '']
+    if not all_comments.empty:
+        analytics['comment_themes'] = analyze_comment_themes(all_comments)
+    else:
+        # Ensure the key exists even if there are no comments
+        analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
 
+    # --- UI Rendering ---
     st.title("🚀 Team Skills Decision Hub v1.0")
     st.markdown("From data art to a decision engine. Each module is designed to answer a key management question.")
 
@@ -66,7 +78,8 @@ def main_app():
     with tabs[4]:
         render_growth_trajectory_placeholder()
     with tabs[5]:
-        render_team_resources_and_health(user_df)
+        # Pass the full user_df and the analytics dict (which now contains comment_themes)
+        render_team_resources_and_health(user_df, analytics)
 
 
 if DEVELOPMENT_MODE:

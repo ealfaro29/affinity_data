@@ -234,7 +234,7 @@ def render_growth_trajectory_placeholder():
     st.image("https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_2024-03-01_12-25-05.png",
              caption="Example of what a future growth chart could look like.", use_column_width=True)
 
-def render_team_resources_and_health(user_df):
+def render_team_resources_and_health(user_df, analytics):
     st.header("🔧 Team Resources & Operational Health")
     st.info("**Decision:** Do we have the right tools and support in place? Are there operational risks to address?")
 
@@ -267,11 +267,11 @@ def render_team_resources_and_health(user_df):
     with st.container(border=True):
         st.subheader("🗣️ Team Feedback & Needs Analysis")
         st.caption("Understand common themes from team comments to guide support initiatives.")
-        all_comments = user_df['Comments'].dropna().str.strip()
-        all_comments = all_comments[all_comments != '']
-        if not all_comments.empty:
-            from analytics_engine import analyze_comment_themes
-            theme_counts = analyze_comment_themes(all_comments)
+        
+        # Get the pre-computed themes from the analytics dictionary
+        theme_counts = analytics.get('comment_themes', pd.DataFrame())
+        
+        if not theme_counts.empty:
             fig = px.bar(theme_counts, x='Mentions', y=theme_counts.index, orientation='h', text_auto=True, title="Common Themes in Comments")
             st.plotly_chart(fig, use_container_width=True)
             with st.expander("View Raw Comments"):
