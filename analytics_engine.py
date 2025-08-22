@@ -37,17 +37,27 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> dict:
     person_summary = _build_person_archetypes(df, user_df)
     analytics['person_summary'] = person_summary
 
-    # Task Summary (used by Gap Radar & Opportunity Lens)
+    # Task Summary with Risk Analysis (Hybrid)
     task_summary = df.groupby('Task_Prefixed').agg(
         Avg_Score=('Score', 'mean'),
         Expert_Count=('Score', lambda s: (s >= 0.8).sum()),
         Beginner_Count=('Score', lambda s: (s < 0.4).sum()),
     )
     task_summary['Competency_Score'] = task_summary['Avg_Score'] * (task_summary['Expert_Count'] + 1)
+    task_summary['Risk Index'] = (task_summary['Beginner_Count'] + 1) / (task_summary['Expert_Count'] + 1)
     task_summary['SPOF'] = task_summary['Expert_Count'] == 1
-    analytics['task_summary'] = task_summary.sort_values(by='Avg_Score', ascending=True)
 
-    # Opportunity Lens: Identify over-strengths and latent capabilities
+    # License expiration risk overlay (from original)
+    experts_df = df[df['Score'] >= 0.8][['Name', 'Task_Prefixed']]
+    experts_with_exp = pd.merge(experts_df, user_df[['Name', 'License Expiration']], on='Name', how='left')
+    ninety_days_from_now = datetime.now() + pd.Timedelta(days=90)
+    expiring_experts = experts_with_exp[(experts_with_exp['License Expiration'].notna()) & (experts_with_exp['License Expiration'] < ninety_days_from_now)]
+    tasks_with_exp_risk = set(expiring_experts['Task_Prefixed'].unique())
+    task_summary['Expiration Risk'] = task_summary.index.isin(tasks_with_exp_risk)
+    
+    analytics['task_summary'] = task_summary
+
+    # Opportunity Lens: Identify over-strengths
     analytics['opportunity_lens'] = task_summary[task_summary['Avg_Score'] >= 0.75].sort_values('Competency_Score', ascending=False)
     
     # Talent pipeline (used by Mentor Engine)
@@ -55,6 +65,10 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> dict:
     pipeline_candidates = df[df['Task_Prefixed'].isin(low_confidence_tasks) & df['Score'].between(0.5, 0.79)]
     pipeline_candidates = pd.merge(pipeline_candidates, person_summary.reset_index()[['Name', 'Archetype']], on='Name')
     analytics['talent_pipeline'] = pipeline_candidates[['Name', 'Archetype', 'Task_Prefixed', 'Score']].sort_values('Score', ascending=False)
+
+    # Skill correlation (from original)
+    skill_pivot = df.pivot_table(index='Name', columns='Skill', values='Score', aggfunc='mean').fillna(df['Score'].mean())
+    analytics['skill_correlation'] = skill_pivot.corr()
 
     return analytics
 
