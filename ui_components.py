@@ -240,8 +240,8 @@ def render_action_playbook(df_merged, analytics):
 
 def render_team_profiles(df_merged, user_df, analytics):
     st.header("👤 Team Profiles")
-    # This function remains unchanged
     person_summary = analytics.get('person_summary', pd.DataFrame())
+
     col1, col2 = st.columns([1, 2], gap="large")
     with col1:
         with st.container(border=True):
@@ -255,6 +255,7 @@ def render_team_profiles(df_merged, user_df, analytics):
             st.dataframe(merged_ranking, height=750, hide_index=True,
                          column_config={"Assessed": st.column_config.CheckboxColumn("Assessed?", disabled=True),
                                         "Avg Score": st.column_config.ProgressColumn("Avg Score", format="%.1f%%", min_value=0, max_value=1)})
+
     with col2:
         with st.container(border=True):
             st.header(f"📇 Profile: {selected_person}")
@@ -263,7 +264,14 @@ def render_team_profiles(df_merged, user_df, analytics):
             else:
                 person_stats = person_summary.loc[selected_person]
                 person_data = df_merged[df_merged['Name'] == selected_person].copy()
-                rank_val = person_summary.reset_index().sort_values('Avg Score', ascending=False).set.index('Name').index.get_loc(selected_person) + 1
+                
+                # --- START: CORRECTED LOGIC BLOCK ---
+                # Sort the summary by score to get the rank order
+                sorted_summary = person_summary.sort_values('Avg Score', ascending=False)
+                # Find the integer position (0-based) of the person in the sorted list and add 1 for rank
+                rank_val = sorted_summary.index.get_loc(selected_person) + 1
+                # --- END: CORRECTED LOGIC BLOCK ---
+
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Overall Rank", f"#{rank_val}")
                 c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}")
@@ -423,7 +431,7 @@ def render_risk_opportunity(analytics):
     risk_matrix = analytics.get('risk_matrix', pd.DataFrame())
     opportunity_df = analytics.get('opportunity_lens', pd.DataFrame())
     talent_pipeline = analytics.get('talent_pipeline', pd.DataFrame())
-    df_merged = analytics.get('df_merged_for_lookup') # We need to pass df_merged into analytics for this to work
+    df_merged = analytics.get('df_merged_for_lookup')
 
     sub_tabs = st.tabs(["🚨 Risk Mitigation Workbench", "💡 Strength Deployment Planner"])
 
@@ -462,7 +470,6 @@ def render_risk_opportunity(analytics):
             
             with c2:
                 st.markdown("##### 🤝 **Assign Mentors**")
-                # Need the raw df to find experts
                 all_experts = df_merged[(df_merged['Task_Prefixed'] == selected_risk) & (df_merged['Score'] >= 0.8)]
                 if not all_experts.empty:
                     st.dataframe(all_experts[['Name', 'Score']].sort_values('Score', ascending=False), hide_index=True, use_container_width=True)
@@ -484,7 +491,6 @@ def render_risk_opportunity(analytics):
 
             st.success(f"**Deployment Plan for: {selected_strength}**")
 
-            # Find the champions for this skill
             champions = df_merged[(df_merged['Task_Prefixed'] == selected_strength) & (df_merged['Score'] >= 0.8)].sort_values('Score', ascending=False)
             
             c1, c2 = st.columns([1,2])
@@ -517,4 +523,4 @@ def login_page():
                 else:
                     st.error("Incorrect username or PIN. Try again.")
             except (KeyError, FileNotFoundError):
-                 st.error("Secrets not configured for deployment. Contact administrator. If developing, check your .streamlit/secrets/toml file.")
+                 st.error("Secrets not configured for deployment. Contact administrator. If developing, check your .streamlit/secrets.toml file.")
