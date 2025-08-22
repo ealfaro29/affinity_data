@@ -6,27 +6,27 @@ import streamlit as st
 from pathlib import Path
 from config import DEVELOPMENT_MODE
 from data_engine import load_and_process_data
-from analytics_engine import compute_analytics, analyze_comment_themes
+from analytics_engine import compute_analytics
 from ui_components import (
-    render_strategic_overview,
-    render_affinity_status,
-    render_action_playbook,
-    render_team_profiles,
-    render_skill_analysis,
-    render_team_dna,
-    render_risk_opportunity
+    render_gap_radar,
+    render_opportunity_lens,
+    render_mentor_engine,
+    render_archetypes_and_roles,
+    render_growth_trajectory_placeholder,
+    render_team_resources_and_health,
+    login_page
 )
 
 st.set_page_config(
-    page_title="Team Skills Hub v0.8",
+    page_title="Team Skills Decision Hub v1.0",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 
 def main_app():
-    st.sidebar.title("🚀 Team Skills Hub")
-    st.sidebar.info("A strategic platform for talent intelligence and team development.")
+    st.sidebar.title("🚀 Team Skills Decision Hub")
+    st.sidebar.info("A strategic platform for talent intelligence and team development, refactored for action.")
 
     # Fixed filenames by design
     data = load_and_process_data("userData.csv", "tasks.json")
@@ -36,41 +36,37 @@ def main_app():
 
     df_merged = data['merged_df']
     user_df = data['user_df']
-    total_participants_in_file = data['total_count']
-    score_parsing_errors = data['parsing_errors']
 
     if df_merged.empty:
-        st.warning("No participants with valid scores were found.")
+        st.warning("No participants with valid assessment scores were found.")
         st.stop()
 
     analytics = compute_analytics(df_merged, user_df)
 
-    st.title("🚀 Team Skills & Affinity Hub v0.8")
+    st.title("🚀 Team Skills Decision Hub v1.0")
+    st.markdown("From data art to a decision engine. Each module is designed to answer a key management question.")
 
     tabs = st.tabs([
-        "📈 Strategic Overview",
-        "⭐ Affinity Status",
-        "🗺️ Action Playbook",
-        "👤 Team Profiles",
-        "🧠 Skill Analysis",
-        "🧬 Team DNA & Dynamics",
-        "🔭 Risk & Opportunity Forecaster",
+        "🎯 Gap Radar (Staffing)",
+        "💡 Opportunity Lens (Strategy)",
+        "🤝 Mentor–Mentee Engine (Development)",
+        "🎭 Archetypes & Roles (Team Design)",
+        "📈 Growth Trajectory (Performance)",
+        "🔧 Team Resources (Operations)"
     ])
 
     with tabs[0]:
-        render_strategic_overview(df_merged, user_df, analytics, total_participants_in_file, score_parsing_errors)
+        render_gap_radar(analytics)
     with tabs[1]:
-        render_affinity_status(user_df)
+        render_opportunity_lens(analytics)
     with tabs[2]:
-        render_action_playbook(df_merged, analytics)
+        render_mentor_engine(df_merged, analytics)
     with tabs[3]:
-        render_team_profiles(df_merged, user_df, analytics)
+        render_archetypes_and_roles(df_merged, user_df, analytics)
     with tabs[4]:
-        render_skill_analysis(df_merged, analytics)
+        render_growth_trajectory_placeholder()
     with tabs[5]:
-        render_team_dna(df_merged, analytics)
-    with tabs[6]:
-        render_risk_opportunity(analytics)
+        render_team_resources_and_health(user_df)
 
 
 if DEVELOPMENT_MODE:
@@ -81,7 +77,4 @@ else:
     if st.session_state.logged_in:
         main_app()
     else:
-        from ui_components import login_page
         login_page()
-
-
