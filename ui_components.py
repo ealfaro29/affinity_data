@@ -10,14 +10,12 @@ from datetime import datetime
 
 
 # ==============================================================================
-# TAB 1: STRATEGIC DASHBOARD
+# ORIGINAL UI COMPONENTS (RESTORED)
 # ==============================================================================
-def render_strategic_dashboard(df_merged, user_df, analytics, total_participants_in_file):
-    st.header("📈 Strategic Dashboard")
-    st.info("Your command center for team skills. Get a high-level overview of vital signs and critical risks.")
 
+def render_strategic_overview(df_merged, user_df, analytics, total_participants_in_file, score_parsing_errors):
     person_summary = analytics.get('person_summary', pd.DataFrame())
-    task_summary = analytics.get('task_summary', pd.DataFrame())
+    risk_radar = analytics.get('risk_radar', pd.DataFrame())
 
     col1, col2 = st.columns(2, gap="large")
     with col1:
@@ -32,65 +30,265 @@ def render_strategic_dashboard(df_merged, user_df, analytics, total_participants
             st.markdown("**Talent Archetype Distribution**")
             archetype_counts = person_summary['Archetype'].value_counts()
             if not archetype_counts.empty:
-                fig_pie = px.pie(archetype_counts, values=archetype_counts.values, names=archetype_counts.index, hole=0.5)
+                fig_pie = px.pie(
+                    archetype_counts,
+                    values=archetype_counts.values,
+                    names=archetype_counts.index,
+                    hole=0.5,
+                )
                 fig_pie.update_layout(height=300, margin=dict(t=30, b=20, l=0, r=0), legend_orientation="h")
                 st.plotly_chart(fig_pie, use_container_width=True)
 
     with col2:
         with st.container(border=True):
-            st.subheader("🚨 Top Skill Risks")
-            st.caption("Tasks with the highest risk (few experts, many beginners).")
-            risk_radar = task_summary.sort_values(by='Risk Index', ascending=False)
+            st.subheader("🩺 Data Health Check")
+            assessed_names = set(df_merged['Name'].unique())
+            all_user_names = set(user_df['Name'].unique())
+            pending_assessment_names = all_user_names - assessed_names
+
+            st.metric("Self-Assessment Response", f"{len(assessed_names)} / {len(all_user_names)}", f"{len(pending_assessment_names)} pending")
+            st.metric("Score Data Quality", f"{score_parsing_errors} invalid entries", "Found in file", delta_color="off")
+            with st.expander(f"View {len(pending_assessment_names)} pending"):
+                if pending_assessment_names:
+                    st.dataframe(user_df[user_df['Name'].isin(pending_assessment_names)][['Name', 'Team Leader']], hide_index=True)
+                else:
+                    st.info("All users completed the assessment.")
+
+    st.divider()
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        with st.container(border=True):
+            st.subheader("🚨 Skill Risk Radar")
+            st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
                 for _, row in risk_radar.head(5).iterrows():
                     st.metric(label=row.name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
             else:
                 st.info("No risk data available.")
-    
-    with st.expander("🩺 View Data Health & Pending Assessments"):
-        assessed_names = set(df_merged['Name'].unique())
-        all_user_names = set(user_df['Name'].unique())
-        pending_assessment_names = all_user_names - assessed_names
-        st.metric("Self-Assessment Response", f"{len(assessed_names)} / {len(all_user_names)}", f"{len(pending_assessment_names)} pending")
-        if pending_assessment_names:
-            st.dataframe(user_df[user_df['Name'].isin(pending_assessment_names)][['Name', 'Team Leader']], hide_index=True)
-
-
-# ==============================================================================
-# TAB 2: TALENT & STAFFING
-# ==============================================================================
-def render_talent_and_staffing(df_merged, user_df, analytics):
-    st.header("👤 Talent & Staffing")
-    st.info("Explore individual profiles, align roles using archetypes, and staff projects with the Gap Radar.")
-
-    sub_tabs = st.tabs(["📇 Team Profiles", "🎭 Archetype Roster", "🎯 Gap Radar"])
-
-    with sub_tabs[0]:
-        _render_team_profiles_view(df_merged, user_df, analytics)
-    with sub_tabs[1]:
-        _render_archetypes_view(analytics)
-    with sub_tabs[2]:
-        _render_gap_radar_view(analytics)
-
-def _render_team_profiles_view(df_merged, user_df, analytics):
-    st.subheader("Individual Skill Profiles")
-    person_summary = analytics.get('person_summary', pd.DataFrame())
-    
-    col1, col2 = st.columns([1, 2], gap="large")
-    with col1:
-        all_user_names_list = sorted(user_df['Name'].unique())
-        selected_person = st.selectbox("Select a Team Member", all_user_names_list)
 
     with col2:
         with st.container(border=True):
-            st.header(f"Profile: {selected_person}")
+            st.subheader("📡 Comparative Risk Profile")
+            if not risk_radar.empty:
+                risk_data_head = risk_radar.head(5).reset_index()
+                categories = ['Avg_Score', 'Risk Index', 'Expert_Count', 'Beginner_Count']
+                valid_categories = [c for c in categories if c in risk_data_head.columns]
+                normalized = risk_data_head[valid_categories].copy()
+                for c in valid_categories:
+                    rng = risk_radar[c].max() - risk_radar[c].min()
+                    normalized[c] = (risk_data_head[c] - risk_radar[c].min()) / rng if rng > 0 else 0.5
+                fig = go.Figure()
+                for i, row in risk_data_head.iterrows():
+                    fig.add_trace(go.Scatterpolar(
+                        r=normalized.loc[i, valid_categories].values,
+                        theta=[c.replace('_', ' ') for c in valid_categories],
+                        fill='toself',
+                        name=row['Task_Prefixed'][:40] + "...",
+                        hovertemplate=f"<b>{row['Task_Prefixed']}</b><br>Risk Index: {row['Risk Index']:.2f}<br>Avg Score: {row['Avg_Score']:.1%}<extra></extra>",
+                    ))
+                fig.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 1])), height=350, margin=dict(l=40, r=40, t=60, b=40))
+                st.plotly_chart(fig, use_container_width=True)
+
+
+def render_affinity_status(user_df, analytics):
+    st.header("⭐ Affinity Status & Team Feedback")
+    with st.container(border=True):
+        st.subheader("📊 Overall Software Status")
+        total_users = len(user_df)
+        k1, k2 = st.columns(2)
+        k1.metric("Active Affinity Licenses", f"{user_df['Active License'].sum()}", f"{user_df['Active License'].sum()/total_users:.0%} of team")
+        k2.metric("Received McK Training", f"{user_df['Has received Affinity training of McK?'].sum()}", f"{user_df['Has received Affinity training of McK?'].sum()/total_users:.0%} of team")
+
+    with st.container(border=True):
+        st.subheader("🚨 License Expiration Timeline")
+        today = datetime.now()
+        exp_df = user_df[user_df['License Expiration'].notna()].copy()
+        if not exp_df.empty:
+            exp_df['Days Left'] = (exp_df['License Expiration'] - today).dt.days
+            exp_df = exp_df[exp_df['Days Left'] > 0]
+            if not exp_df.empty:
+                exp_df['Start'] = today
+                fig = px.timeline(exp_df, x_start="Start", x_end="License Expiration", y="Name", text="Days Left")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.success("✅ No upcoming license expirations.")
+        else:
+            st.info("No license expiration data found.")
+
+    with st.container(border=True):
+        st.subheader("🗣️ Team Feedback Analysis")
+        theme_counts = analytics.get('comment_themes', pd.DataFrame())
+        if not theme_counts.empty:
+            fig = px.bar(theme_counts, x='Mentions', y=theme_counts.index, orientation='h', text_auto=True)
+            st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(user_df[['Name', 'Comments']].drop_duplicates(), height=300, hide_index=True)
+
+
+# ==============================================================================
+# ENHANCED UI COMPONENT: Action Playbook + Gap Radar
+# ==============================================================================
+
+def render_action_playbook(df_merged, analytics):
+    st.header("🗺️ Action Playbook")
+    
+    sub1, sub2, sub3, sub4 = st.tabs(["🎯 Project Gap Radar", "💡 Training Combos", "👥 Group Builder", "🤝 Mentor Matchmaker"])
+
+    # NEW: Added Project Gap Radar as a new, actionable tool
+    with sub1:
+        st.subheader("🎯 Project Skill Gap Analysis")
+        st.info("**Decision:** Who to staff on a project? Which skills require urgent training or hiring to meet demand?")
+        task_summary = analytics.get('task_summary', pd.DataFrame())
+        if task_summary.empty:
+            st.warning("No task data available for analysis.")
+        else:
+            all_skills = sorted(task_summary.index.unique())
+            required_skills = st.multiselect(
+                "Select the skills needed for your upcoming project:",
+                options=all_skills
+            )
+
+            if required_skills:
+                project_readiness = task_summary.loc[required_skills].copy()
+                def get_status(score):
+                    if score > 0.75: return "✅ Covered"
+                    elif score > 0.5: return "⚠️ At Risk"
+                    else: return "❌ Critical Gap"
+                project_readiness['Status'] = project_readiness['Avg_Score'].apply(get_status)
+                st.dataframe(
+                    project_readiness[['Avg_Score', 'Expert_Count', 'Beginner_Count', 'Status']],
+                    column_config={
+                        "Avg_Score": st.column_config.ProgressColumn("Team Avg Confidence", format="%.1f%%", min_value=0, max_value=1)
+                    }, use_container_width=True
+                )
+    
+    # ORIGINAL components below
+    with sub2:
+        st.subheader("💡 Training Combo Generator")
+        risk_radar = analytics.get('risk_radar', pd.DataFrame())
+        skill_corr = analytics.get('skill_correlation', pd.DataFrame())
+        if not risk_radar.empty:
+            primary_task = st.selectbox("Select a Primary Skill", options=risk_radar.index.tolist())
+            primary_skill_series = df_merged[df_merged['Task_Prefixed'] == primary_task]['Skill']
+            if not primary_skill_series.empty and not skill_corr.empty:
+                primary_skill = primary_skill_series.iloc[0]
+                if primary_skill in skill_corr.columns:
+                    synergies = skill_corr[primary_skill].sort_values(ascending=False).drop(primary_skill).head(3)
+                    st.success(f"Suggested Training Module for: {primary_skill}")
+                    st.markdown(f"**1. Primary Focus:** `{primary_task}`")
+                    st.markdown("**2. High-Synergy Skills:**")
+                    for skill, corr in synergies.items():
+                        st.markdown(f"- **{skill}** (Correlation: {corr:.2f})")
+    with sub3:
+        st.subheader("👥 Custom Training Group Builder")
+        with st.form("group_builder_form"):
+            all_tasks = sorted(df_merged['Task_Prefixed'].unique())
+            selected_task = st.selectbox(
+                "Select a skill for the training session:",
+                all_tasks, index=0
+            )
+            g1, g2, g3 = st.columns(3)
+            num_groups = g1.number_input("Number of groups:", 1, 10, value=2)
+            num_per_group = g2.number_input("People per group:", 2, 10, value=4)
+            add_mentors = g3.checkbox("Assign mentor?", value=True)
+
+            if st.form_submit_button("Generate Groups", type="primary", use_container_width=True):
+                st.subheader(f"✅ Generated Groups for: {selected_task}")
+                # --- START: CORRECTED LOGIC BLOCK ---
+                filtered_df = df_merged.copy()
+                if selected_task:
+                    filtered_df = filtered_df[filtered_df['Task_Prefixed'] == selected_task]
+                if filtered_df.empty:
+                    st.error("No participants found for the selected criteria.")
+                else:
+                    group_scores = filtered_df.groupby('Name')['Score'].mean().sort_values()
+                    mentors = group_scores[group_scores >= 0.8].sort_values(ascending=False)
+                    learners = group_scores[group_scores < 0.8].sort_values(ascending=True)
+                    cols = st.columns(num_groups)
+                    assigned = set()
+                    for i in range(num_groups):
+                        with cols[i]:
+                            with st.container(border=True):
+                                st.markdown(f"**Group {i+1}**")
+                                group_data = []
+                                available_mentors = mentors[~mentors.index.isin(assigned)] if add_mentors else pd.Series(dtype=float)
+                                if add_mentors and not available_mentors.empty:
+                                    m_name = available_mentors.index[0]
+                                    group_data.append({'Role': '🏆 Mentor', 'Name': m_name, 'Score': f"{available_mentors.iloc[0]:.1%}"})
+                                    assigned.add(m_name)
+                                needed = num_per_group - len(group_data)
+                                group_learners = learners[~learners.index.isin(assigned)].head(needed)
+                                for name, score in group_learners.items():
+                                    group_data.append({'Role': '🌱 Learner', 'Name': name, 'Score': f"{score:.1%}"})
+                                    assigned.add(name)
+                                if group_data:
+                                    st.dataframe(pd.DataFrame(group_data), hide_index=True, use_container_width=True)
+                                else:
+                                    st.warning(f"Not enough people to form Group {i+1}.")
+                # --- END: CORRECTED LOGIC BLOCK ---
+                
+    with sub4:
+        st.subheader("🤝 Mentor Matchmaker")
+        person_summary = analytics.get('person_summary', pd.DataFrame())
+        learners_list = sorted(person_summary[person_summary['Archetype'].isin(["🌱 Consistent Learner", "🎯 Needs Support"])].index.tolist())
+        all_tasks = sorted(df_merged['Task_Prefixed'].unique())
+        c1, c2 = st.columns(2)
+        selected_learner = c1.selectbox("Select a Learner", options=learners_list)
+        skill_needed = c2.selectbox("Select a Skill Needed", options=all_tasks)
+        if st.button("Find Mentor", use_container_width=True, type="primary"):
+            # --- START: CORRECTED LOGIC BLOCK ---
+            experts_df = df_merged[(df_merged['Task_Prefixed'] == skill_needed) & (df_merged['Name'] != selected_learner) & (df_merged['Score'] >= 0.8)]
+            if experts_df.empty:
+                st.error(f"No suitable mentors found for the skill: **{skill_needed}**.")
+            else:
+                st.success(f"Top Mentor Recommendations for **{selected_learner}** in **{skill_needed}**")
+                recs = experts_df.sort_values(by="Score", ascending=False).head(3)
+                recs = recs.merge(analytics.get('person_summary'), left_on='Name', right_index=True, how='left')
+                st.dataframe(recs[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True,
+                             column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
+            # --- END: CORRECTED LOGIC BLOCK ---
+
+# ==============================================================================
+# ORIGINAL UI COMPONENTS (RESTORED)
+# ==============================================================================
+
+def render_team_profiles(df_merged, user_df, analytics):
+    st.header("👤 Team Profiles")
+    person_summary = analytics.get('person_summary', pd.DataFrame())
+
+    col1, col2 = st.columns([1, 2], gap="large")
+    with col1:
+        with st.container(border=True):
+            st.subheader("📇 Team Roster")
+            all_user_names_list = sorted(user_df['Name'].unique())
+            selected_person = st.selectbox("Select a Team Member", all_user_names_list, label_visibility="collapsed")
+            ranking_df = person_summary.reset_index().sort_values('Avg Score', ascending=False)
+            ranking_df['Rank'] = ranking_df['Avg Score'].rank(method='min', ascending=False).astype(int)
+            merged_ranking = user_df[['Name']].merge(ranking_df, on='Name', how='left')
+            merged_ranking['Assessed'] = merged_ranking['Name'].isin(set(df_merged['Name'].unique()))
+            st.dataframe(merged_ranking, height=750, hide_index=True,
+                         column_config={"Assessed": st.column_config.CheckboxColumn("Assessed?", disabled=True),
+                                        "Avg Score": st.column_config.ProgressColumn("Avg Score", format="%.1f%%", min_value=0, max_value=1)})
+
+    with col2:
+        with st.container(border=True):
+            st.header(f"📇 Profile: {selected_person}")
             if selected_person not in set(df_merged['Name'].unique()):
                 st.warning(f"**{selected_person} has not completed the self-assessment.**")
             else:
                 person_stats = person_summary.loc[selected_person]
                 person_data = df_merged[df_merged['Name'] == selected_person].copy()
-                st.metric("Archetype", person_stats['Archetype'])
-                
+                rank_val = person_summary.reset_index().sort_values('Avg Score', ascending=False).set_index('Name').index.get_loc(selected_person) + 1
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Overall Rank", f"#{rank_val}")
+                c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}")
+                c3.metric("Archetype", person_stats['Archetype'])
+                st.divider()
+                team_avg = df_merged.groupby('Category')['Score'].mean()
+                person_avg = person_data.groupby('Category')['Score'].mean().reindex(team_avg.index, fill_value=0)
+                fig = go.Figure()
+                fig.add_trace(go.Scatterpolar(r=person_avg.values, theta=person_avg.index, fill='toself', name=f'{selected_person}'))
+                fig.add_trace(go.Scatterpolar(r=team_avg.values, theta=team_avg.index, fill='toself', name='Team Avg', opacity=0.6))
+                st.plotly_chart(fig, use_container_width=True)
                 st.markdown("**Strengths & Development Areas**")
                 person_skills = person_data.sort_values('Score', ascending=False).drop_duplicates(subset=['Task_Prefixed'])
                 sc1, sc2 = st.columns(2)
@@ -103,124 +301,99 @@ def _render_team_profiles_view(df_merged, user_df, analytics):
                     st.dataframe(person_skills.tail(5)[['Task_Prefixed', 'Score']], hide_index=True,
                                  column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
 
-def _render_archetypes_view(analytics):
-    st.subheader("Role Alignment Roster")
-    st.caption("Filter the roster to find the right people for your project roles.")
-    person_summary = analytics.get('person_summary', pd.DataFrame())
-    
-    all_archetypes = ['All'] + sorted(person_summary['Archetype'].unique())
-    selected_archetype = st.selectbox("Filter by Archetype:", options=all_archetypes)
+def render_skill_analysis(df_merged, analytics):
+    st.header("🧠 Skill Analysis")
+    skill_corr_matrix = analytics.get('skill_correlation', pd.DataFrame())
 
-    roster_df = person_summary if selected_archetype == 'All' else person_summary[person_summary['Archetype'] == selected_archetype]
-
-    st.dataframe(
-        roster_df.reset_index()[['Name', 'Archetype', 'Avg Score', 'Team Leader']],
-        height=500, use_container_width=True, hide_index=True,
-        column_config={"Avg Score": st.column_config.ProgressColumn("Avg Confidence", min_value=0, max_value=1)}
-    )
-
-def _render_gap_radar_view(analytics):
-    st.subheader("Project Skill Gap Analysis")
-    st.caption("**Decision:** Who to staff? Which skills require urgent training to meet demand?")
-    task_summary = analytics.get('task_summary', pd.DataFrame())
-    
-    required_skills = st.multiselect("Select skills needed for a project:", options=sorted(task_summary.index.unique()))
-
-    if required_skills:
-        project_readiness = task_summary.loc[required_skills].copy()
-        def get_status(score):
-            if score > 0.75: return "✅ Covered"
-            elif score > 0.5: return "⚠️ At Risk"
-            else: return "❌ Critical Gap"
-        project_readiness['Status'] = project_readiness['Avg_Score'].apply(get_status)
-        st.dataframe(
-            project_readiness[['Avg_Score', 'Expert_Count', 'Status']],
-            column_config={"Avg_Score": st.column_config.ProgressColumn("Team Avg Confidence", format="%.1f%%", min_value=0, max_value=1)},
-            use_container_width=True
-        )
-
-# ==============================================================================
-# TAB 3: DEVELOPMENT & GROWTH
-# ==============================================================================
-def render_development_and_growth(df_merged, analytics):
-    st.header("🌱 Development & Growth")
-    st.info("Accelerate team growth with the Mentor Engine and discover strategic opportunities.")
-
-    sub_tabs = st.tabs(["🤝 Mentor Engine", "💡 Opportunity Lens", "📈 Growth Trajectory (Future)"])
-
-    with sub_tabs[0]:
-        _render_mentor_engine_view(df_merged, analytics)
-    with sub_tabs[1]:
-        _render_opportunity_lens_view(analytics)
-    with sub_tabs[2]:
-        st.warning("📈 **Feature in Development:** This module requires historical data snapshots to track skill progress over time.")
-        st.markdown("**To enable this, please save a version of `userData.csv` periodically (e.g., `userData_YYYY-MM.csv`).**")
-
-def _render_mentor_engine_view(df_merged, analytics):
-    st.subheader("Build Training Groups & Find Mentors")
-    person_summary = analytics.get('person_summary', pd.DataFrame())
-    
-    with st.expander("👥 Custom Training Group Builder", expanded=True):
-        all_tasks = sorted(df_merged['Task_Prefixed'].unique())
-        selected_task = st.selectbox("Select a skill for the training session:", all_tasks)
-        if st.button("Generate Groups", key="gen_groups"):
-            filtered_df = df_merged[df_merged['Task_Prefixed'] == selected_task]
-            group_scores = filtered_df.groupby('Name')['Score'].mean().sort_values()
-            mentors = group_scores[group_scores >= 0.8].sort_values(ascending=False)
-            learners = group_scores[group_scores < 0.8]
-            st.success(f"Found {len(mentors)} potential mentors and {len(learners)} learners for this skill.")
-    
-    with st.expander("🤝 Mentor Matchmaker", expanded=True):
-        learners_list = sorted(person_summary[person_summary['Archetype'].isin(["🌱 Consistent Learner", "🎯 Needs Support"])].index.tolist())
-        all_tasks = sorted(df_merged['Task_Prefixed'].unique())
-        c1, c2 = st.columns(2)
-        selected_learner = c1.selectbox("Select a Learner", options=learners_list)
-        skill_needed = c2.selectbox("Select a Skill Needed", options=all_tasks)
-        if st.button("Find Mentor", use_container_width=True, type="primary"):
-            experts_df = df_merged[(df_merged['Task_Prefixed'] == skill_needed) & (df_merged['Name'] != selected_learner) & (df_merged['Score'] >= 0.8)]
-            if not experts_df.empty:
-                st.success(f"Top Mentor Recommendations for **{selected_learner}**")
-                recs = experts_df.sort_values(by="Score", ascending=False).head(3)
-                st.dataframe(recs[['Name', 'Score']], hide_index=True, use_container_width=True)
-            else:
-                st.error("No suitable mentors found for this skill.")
-
-def _render_opportunity_lens_view(analytics):
-    st.subheader("Strategic Skill Radar")
-    st.caption("**Decision:** Where can we expand our services based on latent team strengths?")
-    opportunity_df = analytics.get('opportunity_lens', pd.DataFrame())
-    if opportunity_df.empty:
-        st.info("No significant team strengths found (Avg. Confidence < 75%).")
-    else:
-        st.dataframe(opportunity_df.sort_values('Competency_Score', ascending=False),
-            column_config={"Avg_Score": st.column_config.ProgressColumn("Avg Confidence", format="%.1f%%", min_value=0, max_value=1)},
-            use_container_width=True
-        )
-
-# ==============================================================================
-# TAB 4: SKILL INTELLIGENCE
-# ==============================================================================
-def render_skill_intelligence(df_merged, analytics):
-    st.header("🧠 Skill Intelligence")
-    st.info("Perform deep dives into specific skills, analyze distributions, and understand skill relationships.")
-    
-    sub_tabs = st.tabs(["📊 Skill Deep Dive", "🚨 Skill Risk Matrix", "🕸️ Skill Correlation"])
-    
-    with sub_tabs[0]:
-        options = sorted(df_merged['Task_Prefixed'].unique())
-        selected = st.selectbox("Select a Task to Analyze", options)
-        if selected:
-            skill_data = df_merged[df_merged['Task_Prefixed'] == selected]
-            c1, c2 = st.columns(2)
+    sub1, sub2, sub3 = st.tabs(["📊 Skill Distribution", "🏆 Talent Composition", "🕸️ Skill Correlation"])
+    with sub1:
+        st.subheader("Deep Dive by Skill or Category")
+        analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
+        if analysis_type == "Task":
+            options, label, filter_col = sorted(df_merged['Task_Prefixed'].unique()), "Select Task(s)", 'Task_Prefixed'
+        else:
+            options, label, filter_col = sorted(df_merged['Category'].unique()), "Select Category(s)", 'Category'
+        selected = st.multiselect(label, options, default=options[0] if options else None)
+        if not selected:
+            st.warning(f"Please select at least one {analysis_type}.")
+        else:
+            skill_data = df_merged[df_merged[filter_col].isin(selected)]
+            c1, c2, c3 = st.columns(3)
             c1.metric("Avg Confidence", f"{skill_data['Score'].mean():.1%}")
             c2.metric("Experts (≥80%)", skill_data[skill_data['Score'] >= 0.8]['Name'].nunique())
-            st.markdown("**Score Distribution**")
-            fig = px.histogram(skill_data, x='Score', nbins=10)
+            c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < 0.4]['Name'].nunique())
+            st.divider()
+            s1, s2 = st.columns(2)
+            with s1:
+                st.markdown("**Skill Leaderboard**")
+                st.dataframe(skill_data.groupby('Name')['Score'].mean().sort_values(ascending=False).reset_index(), hide_index=True,
+                             column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
+            with s2:
+                st.markdown("**Score Distribution**")
+                fig = px.histogram(skill_data, x='Score', nbins=10)
+                fig.update_layout(height=350, margin=dict(t=20, b=20), showlegend=False)
+                st.plotly_chart(fig, use_container_width=True)
+
+    with sub2:
+        st.subheader("Talent Composition")
+        hidden_stars = analytics.get('hidden_stars', pd.DataFrame())
+        adjusted_ranking = analytics.get('adjusted_ranking', pd.DataFrame())
+        c1, c2 = st.columns([1, 2], gap="large")
+        with c1:
+            with st.container(border=True):
+                st.markdown("**🌟 Hidden Stars**")
+                if hidden_stars.empty:
+                    st.info("No 'Hidden Stars' found.")
+                else:
+                    st.dataframe(hidden_stars[['Name', 'Task_Prefixed', 'Score']], hide_index=True, height=300)
+        with c2:
+            with st.container(border=True):
+                st.markdown("**🧗 Adjusted Difficulty Ranking**")
+                st.dataframe(adjusted_ranking, hide_index=True, height=350,
+                             column_config={"Adjusted Score": st.column_config.BarChartColumn("Adjusted Score", y_min=0)})
+
+    with sub3:
+        st.subheader("Skill Correlation Heatmap")
+        if not skill_corr_matrix.empty:
+            fig = px.imshow(skill_corr_matrix, text_auto=".2f", aspect="auto")
+            fig.update_layout(height=600, title="Skill Correlation Matrix")
             st.plotly_chart(fig, use_container_width=True)
+
+
+def render_team_dna(df_merged, analytics):
+    st.header("🧬 Team DNA & Dynamics")
+    st.info("Analysis of team composition and distinctive characteristics.")
+
+    person_summary = analytics.get('person_summary', pd.DataFrame())
+
+    st.subheader("🔬 Team Skill Fingerprint")
+    all_teams = sorted([t for t in person_summary['Team Leader'].unique() if t])
+    if all_teams:
+        selected_team = st.selectbox("Select a Team Leader", all_teams)
+        if selected_team:
+            team_members = person_summary[person_summary['Team Leader'] == selected_team].index
+            team_data = df_merged[df_merged['Name'].isin(team_members)]
+            team_fingerprint = team_data.groupby('Category')['Score'].quantile(0.75)
+            fig = go.Figure()
+            fig.add_trace(go.Scatterpolar(r=team_fingerprint.values, theta=team_fingerprint.index, fill='toself', name='Advanced Competency (75th Percentile)'))
+            fig.update_layout(title=f"Skill Fingerprint – {selected_team}", polar=dict(radialaxis=dict(visible=True, range=[0, 1])))
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No team leader data available.")
+
+# ==============================================================================
+# ENHANCED UI COMPONENT: Risk & Opportunity + Opportunity Lens
+# ==============================================================================
+
+def render_risk_opportunity(analytics):
+    st.header("🔭 Risk & Opportunity Forecaster")
     
-    with sub_tabs[1]:
-        st.subheader("Full Talent Risk Matrix")
-        risk_matrix = analytics.get('task_summary', pd.DataFrame())
+    sub_tabs = st.tabs(["🚨 Talent Risk Matrix", "💡 Strategic Opportunity Lens", "🌱 Talent Pipeline"])
+
+    with sub_tabs[0]:
+        st.subheader("🚨 Talent Risk Matrix")
+        st.info("Proactive identification of talent risks like Single Points of Failure (SPOF) and expiring expert licenses.")
+        risk_matrix = analytics.get('risk_matrix', pd.DataFrame())
         if not risk_matrix.empty:
             def highlight_risks(row):
                 styles = [''] * len(row)
@@ -231,43 +404,31 @@ def render_skill_intelligence(df_merged, analytics):
             st.dataframe(risk_df_display.style.apply(highlight_risks, axis=1).format({'Avg_Score': "{:.1%}"}), use_container_width=True)
             st.caption("🟧 Orange: Single Point of Failure (SPOF). 🔴 Red: Key expert license expires soon.")
 
-    with sub_tabs[2]:
-        st.subheader("Skill Correlation Heatmap")
-        skill_corr_matrix = analytics.get('skill_correlation', pd.DataFrame())
-        if not skill_corr_matrix.empty:
-            fig = px.imshow(skill_corr_matrix, text_auto=".2f", aspect="auto", height=600)
+    # NEW: Added Opportunity Lens as a new, strategic tool
+    with sub_tabs[1]:
+        st.subheader("💡 Strategic Opportunity Lens")
+        st.info("**Decision:** Where can we expand our services? What new initiatives can we launch based on our team's latent strengths?")
+        opportunity_df = analytics.get('opportunity_lens', pd.DataFrame())
+        if opportunity_df.empty:
+            st.warning("No significant team strengths identified (Avg. Confidence < 75%). Focus on foundational training.")
+        else:
+            top_opportunities = opportunity_df.head(10)
+            fig = px.bar(
+                top_opportunities, x='Competency_Score', y=top_opportunities.index, orientation='h',
+                title="Top 10 Latent Strengths by Competency (Confidence x Experts)", text='Avg_Score'
+            )
+            fig.update_traces(texttemplate='%{text:.0%}', textposition='outside')
             st.plotly_chart(fig, use_container_width=True)
 
-# ==============================================================================
-# TAB 5: OPERATIONAL HEALTH
-# ==============================================================================
-def render_operational_health(user_df, analytics):
-    st.header("🔧 Operational Health")
-    st.info("Manage software licenses, training status, and analyze qualitative team feedback.")
-
-    st.subheader("📊 Affinity Software & Training Status")
-    total_users = len(user_df)
-    k1, k2 = st.columns(2)
-    k1.metric("Active Affinity Licenses", f"{user_df['Active License'].sum()}", f"{user_df['Active License'].sum()/total_users:.0%} of team")
-    k2.metric("Received McK Training", f"{user_df['Has received Affinity training of McK?'].sum()}", f"{user_df['Has received Affinity training of McK?'].sum()/total_users:.0%} of team")
-
-    st.subheader("🚨 License Expiration Timeline")
-    exp_df = user_df[user_df['License Expiration'].notna()].copy()
-    if not exp_df.empty:
-        exp_df['Days Left'] = (exp_df['License Expiration'] - pd.to_datetime('today')).dt.days
-        exp_df_upcoming = exp_df[(exp_df['Days Left'] > 0) & (exp_df['Days Left'] <= 180)].sort_values('Days Left')
-        if not exp_df_upcoming.empty:
-            st.dataframe(exp_df_upcoming[['Name', 'License Expiration', 'Days Left']], use_container_width=True, hide_index=True)
+    with sub_tabs[2]:
+        st.subheader("🌱 Talent Pipeline")
+        st.info("Identify mid-level performers in critical, low-confidence tasks who are prime candidates for upskilling.")
+        talent_pipeline = analytics.get('talent_pipeline', pd.DataFrame())
+        if not talent_pipeline.empty:
+            st.dataframe(talent_pipeline, use_container_width=True, hide_index=True,
+                         column_config={"Score": st.column_config.ProgressColumn("Current Confidence", format="%.1f%%", min_value=0, max_value=1)})
         else:
-            st.success("✅ No licenses expiring in the next 6 months.")
-    
-    st.subheader("🗣️ Team Feedback Analysis")
-    theme_counts = analytics.get('comment_themes', pd.DataFrame())
-    if not theme_counts.empty:
-        fig = px.bar(theme_counts, x='Mentions', y=theme_counts.index, orientation='h', text_auto=True, title="Common Themes in Comments")
-        st.plotly_chart(fig, use_container_width=True)
-        with st.expander("View Raw Comments"):
-            st.dataframe(user_df[['Name', 'Comments']].dropna().drop_duplicates(), hide_index=True)
+            st.success("✅ No current candidates identified for the pipeline.")
 
 # ==============================================================================
 # LOGIN PAGE
@@ -277,7 +438,8 @@ def login_page():
     with st.form("login_form"):
         username = st.text_input("Username").lower()
         password = st.text_input("PIN", type="password")
-        if st.form_submit_button("Log In"):
+        submitted = st.form_submit_button("Log In")
+        if submitted:
             try:
                 correct_username = st.secrets["credentials"]["username"]
                 correct_password = st.secrets["credentials"]["password"]
@@ -285,6 +447,6 @@ def login_page():
                     st.session_state.logged_in = True
                     st.rerun()
                 else:
-                    st.error("Incorrect username or PIN.")
+                    st.error("Incorrect username or PIN. Try again.")
             except (KeyError, FileNotFoundError):
-                 st.error("Secrets not configured for deployment. Contact administrator.")
+                 st.error("Secrets not configured for deployment. Contact administrator. If developing, check your .streamlit/secrets.toml file.")
