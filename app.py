@@ -45,7 +45,7 @@ def main_app():
 
     analytics = compute_analytics(df_merged, user_df)
 
-    st.title("🚀 Team Skills & Affinity Hub")
+    st.title("🚀 Team Skills & Affinity Hub v0.8")
 
     tabs = st.tabs([
         "📈 Strategic Overview",
