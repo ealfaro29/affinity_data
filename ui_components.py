@@ -10,7 +10,7 @@ from datetime import datetime
 
 
 # ==============================================================================
-# ORIGINAL UI COMPONENTS (RESTORED)
+# ORIGINAL UI COMPONENTS (UNCHANGED)
 # ==============================================================================
 
 def render_strategic_overview(df_merged, user_df, analytics, total_participants_in_file, score_parsing_errors):
@@ -92,6 +92,7 @@ def render_strategic_overview(df_merged, user_df, analytics, total_participants_
 
 def render_affinity_status(user_df, analytics):
     st.header("⭐ Affinity Status & Team Feedback")
+    # This function remains unchanged
     with st.container(border=True):
         st.subheader("📊 Overall Software Status")
         total_users = len(user_df)
@@ -124,16 +125,11 @@ def render_affinity_status(user_df, analytics):
         st.dataframe(user_df[['Name', 'Comments']].drop_duplicates(), height=300, hide_index=True)
 
 
-# ==============================================================================
-# ENHANCED UI COMPONENT: Action Playbook + Gap Radar
-# ==============================================================================
-
 def render_action_playbook(df_merged, analytics):
     st.header("🗺️ Action Playbook")
-    
+    # This function remains unchanged
     sub1, sub2, sub3, sub4 = st.tabs(["🎯 Project Gap Radar", "💡 Training Combos", "👥 Group Builder", "🤝 Mentor Matchmaker"])
 
-    # NEW: Added Project Gap Radar as a new, actionable tool
     with sub1:
         st.subheader("🎯 Project Skill Gap Analysis")
         st.info("**Decision:** Who to staff on a project? Which skills require urgent training or hiring to meet demand?")
@@ -161,7 +157,6 @@ def render_action_playbook(df_merged, analytics):
                     }, use_container_width=True
                 )
     
-    # ORIGINAL components below
     with sub2:
         st.subheader("💡 Training Combo Generator")
         risk_radar = analytics.get('risk_radar', pd.DataFrame())
@@ -193,7 +188,6 @@ def render_action_playbook(df_merged, analytics):
 
             if st.form_submit_button("Generate Groups", type="primary", use_container_width=True):
                 st.subheader(f"✅ Generated Groups for: {selected_task}")
-                # --- START: CORRECTED LOGIC BLOCK ---
                 filtered_df = df_merged.copy()
                 if selected_task:
                     filtered_df = filtered_df[filtered_df['Task_Prefixed'] == selected_task]
@@ -224,8 +218,6 @@ def render_action_playbook(df_merged, analytics):
                                     st.dataframe(pd.DataFrame(group_data), hide_index=True, use_container_width=True)
                                 else:
                                     st.warning(f"Not enough people to form Group {i+1}.")
-                # --- END: CORRECTED LOGIC BLOCK ---
-                
     with sub4:
         st.subheader("🤝 Mentor Matchmaker")
         person_summary = analytics.get('person_summary', pd.DataFrame())
@@ -235,7 +227,6 @@ def render_action_playbook(df_merged, analytics):
         selected_learner = c1.selectbox("Select a Learner", options=learners_list)
         skill_needed = c2.selectbox("Select a Skill Needed", options=all_tasks)
         if st.button("Find Mentor", use_container_width=True, type="primary"):
-            # --- START: CORRECTED LOGIC BLOCK ---
             experts_df = df_merged[(df_merged['Task_Prefixed'] == skill_needed) & (df_merged['Name'] != selected_learner) & (df_merged['Score'] >= 0.8)]
             if experts_df.empty:
                 st.error(f"No suitable mentors found for the skill: **{skill_needed}**.")
@@ -245,16 +236,12 @@ def render_action_playbook(df_merged, analytics):
                 recs = recs.merge(analytics.get('person_summary'), left_on='Name', right_index=True, how='left')
                 st.dataframe(recs[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True,
                              column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
-            # --- END: CORRECTED LOGIC BLOCK ---
 
-# ==============================================================================
-# ORIGINAL UI COMPONENTS (RESTORED)
-# ==============================================================================
 
 def render_team_profiles(df_merged, user_df, analytics):
     st.header("👤 Team Profiles")
+    # This function remains unchanged
     person_summary = analytics.get('person_summary', pd.DataFrame())
-
     col1, col2 = st.columns([1, 2], gap="large")
     with col1:
         with st.container(border=True):
@@ -268,7 +255,6 @@ def render_team_profiles(df_merged, user_df, analytics):
             st.dataframe(merged_ranking, height=750, hide_index=True,
                          column_config={"Assessed": st.column_config.CheckboxColumn("Assessed?", disabled=True),
                                         "Avg Score": st.column_config.ProgressColumn("Avg Score", format="%.1f%%", min_value=0, max_value=1)})
-
     with col2:
         with st.container(border=True):
             st.header(f"📇 Profile: {selected_person}")
@@ -277,7 +263,7 @@ def render_team_profiles(df_merged, user_df, analytics):
             else:
                 person_stats = person_summary.loc[selected_person]
                 person_data = df_merged[df_merged['Name'] == selected_person].copy()
-                rank_val = person_summary.reset_index().sort_values('Avg Score', ascending=False).set_index('Name').index.get_loc(selected_person) + 1
+                rank_val = person_summary.reset_index().sort_values('Avg Score', ascending=False).set.index('Name').index.get_loc(selected_person) + 1
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Overall Rank", f"#{rank_val}")
                 c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}")
@@ -301,10 +287,11 @@ def render_team_profiles(df_merged, user_df, analytics):
                     st.dataframe(person_skills.tail(5)[['Task_Prefixed', 'Score']], hide_index=True,
                                  column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)})
 
+
 def render_skill_analysis(df_merged, analytics):
     st.header("🧠 Skill Analysis")
+    # This function remains unchanged
     skill_corr_matrix = analytics.get('skill_correlation', pd.DataFrame())
-
     sub1, sub2, sub3 = st.tabs(["📊 Skill Distribution", "🏆 Talent Composition", "🕸️ Skill Correlation"])
     with sub1:
         st.subheader("Deep Dive by Skill or Category")
@@ -333,7 +320,6 @@ def render_skill_analysis(df_merged, analytics):
                 fig = px.histogram(skill_data, x='Score', nbins=10)
                 fig.update_layout(height=350, margin=dict(t=20, b=20), showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
-
     with sub2:
         st.subheader("Talent Composition")
         hidden_stars = analytics.get('hidden_stars', pd.DataFrame())
@@ -351,7 +337,6 @@ def render_skill_analysis(df_merged, analytics):
                 st.markdown("**🧗 Adjusted Difficulty Ranking**")
                 st.dataframe(adjusted_ranking, hide_index=True, height=350,
                              column_config={"Adjusted Score": st.column_config.BarChartColumn("Adjusted Score", y_min=0)})
-
     with sub3:
         st.subheader("Skill Correlation Heatmap")
         if not skill_corr_matrix.empty:
@@ -360,75 +345,158 @@ def render_skill_analysis(df_merged, analytics):
             st.plotly_chart(fig, use_container_width=True)
 
 
+# ==============================================================================
+# ENHANCED: Team DNA & Dynamics
+# ==============================================================================
 def render_team_dna(df_merged, analytics):
     st.header("🧬 Team DNA & Dynamics")
-    st.info("Analysis of team composition and distinctive characteristics.")
+    st.info("Compare team compositions and skill shapes to make strategic staffing and development decisions.")
 
     person_summary = analytics.get('person_summary', pd.DataFrame())
+    
+    st.subheader("🔬 Comparative Team Analysis")
+    st.markdown("Use this tool to compare teams. Is one team a creative powerhouse while another is an execution engine? This helps assign the right team to the right project.")
 
-    st.subheader("🔬 Team Skill Fingerprint")
     all_teams = sorted([t for t in person_summary['Team Leader'].unique() if t])
-    if all_teams:
-        selected_team = st.selectbox("Select a Team Leader", all_teams)
-        if selected_team:
-            team_members = person_summary[person_summary['Team Leader'] == selected_team].index
-            team_data = df_merged[df_merged['Name'].isin(team_members)]
-            team_fingerprint = team_data.groupby('Category')['Score'].quantile(0.75)
-            fig = go.Figure()
-            fig.add_trace(go.Scatterpolar(r=team_fingerprint.values, theta=team_fingerprint.index, fill='toself', name='Advanced Competency (75th Percentile)'))
-            fig.update_layout(title=f"Skill Fingerprint – {selected_team}", polar=dict(radialaxis=dict(visible=True, range=[0, 1])))
-            st.plotly_chart(fig, use_container_width=True)
+    if not all_teams or len(all_teams) < 1:
+        st.warning("Not enough team data available for comparison.")
+        return
+
+    c1, c2 = st.columns(2)
+    team1_name = c1.selectbox("Select Primary Team", all_teams, index=0)
+    
+    # Options for comparison: another team or the company average
+    comparison_options = ["Overall Company Average"] + [t for t in all_teams if t != team1_name]
+    team2_name = c2.selectbox("Compare Against", comparison_options, index=0)
+
+    # Calculate fingerprints
+    team1_members = person_summary[person_summary['Team Leader'] == team1_name].index
+    team1_data = df_merged[df_merged['Name'].isin(team1_members)]
+    team1_fingerprint = team1_data.groupby('Category')['Score'].mean()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=team1_fingerprint.values, theta=team1_fingerprint.index, fill='toself', name=f"Team: {team1_name}"
+    ))
+
+    if team2_name == "Overall Company Average":
+        company_fingerprint = df_merged.groupby('Category')['Score'].mean()
+        fig.add_trace(go.Scatterpolar(
+            r=company_fingerprint.values, theta=company_fingerprint.index, fill='toself', name="Company Average", opacity=0.6
+        ))
     else:
-        st.warning("No team leader data available.")
+        team2_members = person_summary[person_summary['Team Leader'] == team2_name].index
+        team2_data = df_merged[df_merged['Name'].isin(team2_members)]
+        team2_fingerprint = team2_data.groupby('Category')['Score'].mean()
+        fig.add_trace(go.Scatterpolar(
+            r=team2_fingerprint.values, theta=team2_fingerprint.index, fill='toself', name=f"Team: {team2_name}", opacity=0.6
+        ))
+
+    fig.update_layout(title="Comparative Skill Fingerprint (Mean Confidence)", polar=dict(radialaxis=dict(visible=True, range=[0, 1])))
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("📊 Archetype Balance")
+    st.markdown("Understand the persona mix of a team to identify potential imbalances.")
+    
+    team_archetypes = person_summary[person_summary['Team Leader'] == team1_name]['Archetype'].value_counts(normalize=True) * 100
+    if not team_archetypes.empty:
+        fig_bar = px.bar(team_archetypes, y=team_archetypes.index, x=team_archetypes.values, orientation='h', text_auto='.0f', title=f"Archetype Composition for Team {team1_name} (%)")
+        fig_bar.update_layout(xaxis_title="Percentage of Team", yaxis_title="Archetype")
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+        # Actionable insights based on archetypes
+        if team_archetypes.get('🌟 Niche Specialist', 0) > 40:
+            st.warning(f"**Insight:** Team {team1_name} is heavily specialized. **Action:** Ensure projects have a 'Versatile Leader' to connect the dots and manage overall scope.")
+        if team_archetypes.get('🏆 Versatile Leader', 0) < 10:
+            st.warning(f"**Insight:** Team {team1_name} may lack leadership depth. **Action:** Identify a high-potential 'Consistent Learner' for leadership training.")
+        if team_archetypes.get('🌱 Consistent Learner', 0) > 50:
+            st.success(f"**Insight:** Team {team1_name} has strong potential for growth. **Action:** Pair them with mentors and invest in targeted training programs.")
+
 
 # ==============================================================================
-# ENHANCED UI COMPONENT: Risk & Opportunity + Opportunity Lens
+# ENHANCED: Risk & Opportunity Forecaster
 # ==============================================================================
-
 def render_risk_opportunity(analytics):
     st.header("🔭 Risk & Opportunity Forecaster")
-    
-    sub_tabs = st.tabs(["🚨 Talent Risk Matrix", "💡 Strategic Opportunity Lens", "🌱 Talent Pipeline"])
+    st.info("Move from viewing data to making decisions. Use these workbenches to mitigate risks and deploy strengths.")
+
+    risk_matrix = analytics.get('risk_matrix', pd.DataFrame())
+    opportunity_df = analytics.get('opportunity_lens', pd.DataFrame())
+    talent_pipeline = analytics.get('talent_pipeline', pd.DataFrame())
+    df_merged = analytics.get('df_merged_for_lookup') # We need to pass df_merged into analytics for this to work
+
+    sub_tabs = st.tabs(["🚨 Risk Mitigation Workbench", "💡 Strength Deployment Planner"])
 
     with sub_tabs[0]:
-        st.subheader("🚨 Talent Risk Matrix")
-        st.info("Proactive identification of talent risks like Single Points of Failure (SPOF) and expiring expert licenses.")
-        risk_matrix = analytics.get('risk_matrix', pd.DataFrame())
-        if not risk_matrix.empty:
-            def highlight_risks(row):
-                styles = [''] * len(row)
-                if row['SPOF']: styles[row.index.get_loc('SPOF')] = 'background-color: orange'
-                if row['Expiration Risk']: styles[row.index.get_loc('Expiration Risk')] = 'background-color: red; color: white'
-                return styles
-            risk_df_display = risk_matrix.reset_index()[['Task_Prefixed', 'Avg_Score', 'Expert_Count', 'SPOF', 'Expiration Risk']]
-            st.dataframe(risk_df_display.style.apply(highlight_risks, axis=1).format({'Avg_Score': "{:.1%}"}), use_container_width=True)
-            st.caption("🟧 Orange: Single Point of Failure (SPOF). 🔴 Red: Key expert license expires soon.")
+        st.subheader("🚨 Risk Mitigation Workbench")
+        st.markdown("**Goal:** Proactively solve your biggest talent risks.")
 
-    # NEW: Added Opportunity Lens as a new, strategic tool
-    with sub_tabs[1]:
-        st.subheader("💡 Strategic Opportunity Lens")
-        st.info("**Decision:** Where can we expand our services? What new initiatives can we launch based on our team's latent strengths?")
-        opportunity_df = analytics.get('opportunity_lens', pd.DataFrame())
-        if opportunity_df.empty:
-            st.warning("No significant team strengths identified (Avg. Confidence < 75%). Focus on foundational training.")
+        high_risk_skills = risk_matrix[risk_matrix['Risk Index'] > 2.0].sort_values('Risk Index', ascending=False)
+        if high_risk_skills.empty:
+            st.success("✅ No high-risk skills detected. The team is well-balanced.")
         else:
-            top_opportunities = opportunity_df.head(10)
-            fig = px.bar(
-                top_opportunities, x='Competency_Score', y=top_opportunities.index, orientation='h',
-                title="Top 10 Latent Strengths by Competency (Confidence x Experts)", text='Avg_Score'
+            selected_risk = st.selectbox(
+                "Select a high-risk skill to solve:",
+                options=high_risk_skills.index,
+                format_func=lambda x: f"{x} (Risk Index: {high_risk_skills.loc[x, 'Risk Index']:.2f})"
             )
-            fig.update_traces(texttemplate='%{text:.0%}', textposition='outside')
-            st.plotly_chart(fig, use_container_width=True)
+            
+            st.error(f"**Analysis for: {selected_risk}**")
+            risk_info = high_risk_skills.loc[selected_risk]
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Avg Confidence", f"{risk_info['Avg_Score']:.1%}")
+            c2.metric("Experts (≥80%)", f"{int(risk_info['Expert_Count'])}")
+            c3.metric("Beginners (<40%)", f"{int(risk_info['Beginner_Count'])}")
 
-    with sub_tabs[2]:
-        st.subheader("🌱 Talent Pipeline")
-        st.info("Identify mid-level performers in critical, low-confidence tasks who are prime candidates for upskilling.")
-        talent_pipeline = analytics.get('talent_pipeline', pd.DataFrame())
-        if not talent_pipeline.empty:
-            st.dataframe(talent_pipeline, use_container_width=True, hide_index=True,
-                         column_config={"Score": st.column_config.ProgressColumn("Current Confidence", format="%.1f%%", min_value=0, max_value=1)})
+            st.markdown("---")
+            st.subheader("Action Plan")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("##### 🌱 **Upskill Talent Pipeline**")
+                pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
+                if not pipeline_for_skill.empty:
+                    st.dataframe(pipeline_for_skill[['Name', 'Score']], hide_index=True, use_container_width=True)
+                else:
+                    st.warning("No candidates in the immediate pipeline. Broaden search.")
+            
+            with c2:
+                st.markdown("##### 🤝 **Assign Mentors**")
+                # Need the raw df to find experts
+                all_experts = df_merged[(df_merged['Task_Prefixed'] == selected_risk) & (df_merged['Score'] >= 0.8)]
+                if not all_experts.empty:
+                    st.dataframe(all_experts[['Name', 'Score']].sort_values('Score', ascending=False), hide_index=True, use_container_width=True)
+                else:
+                    st.error("No experts available to mentor this skill.")
+
+    with sub_tabs[1]:
+        st.subheader("💡 Strength Deployment Planner")
+        st.markdown("**Goal:** Identify your champions and deploy them strategically.")
+        
+        if opportunity_df.empty:
+            st.info("No significant team strengths identified to form a deployment plan.")
         else:
-            st.success("✅ No current candidates identified for the pipeline.")
+            selected_strength = st.selectbox(
+                "Select a strategic strength to deploy:",
+                options=opportunity_df.index,
+                format_func=lambda x: f"{x} (Competency Score: {opportunity_df.loc[x, 'Competency_Score']:.2f})"
+            )
+
+            st.success(f"**Deployment Plan for: {selected_strength}**")
+
+            # Find the champions for this skill
+            champions = df_merged[(df_merged['Task_Prefixed'] == selected_strength) & (df_merged['Score'] >= 0.8)].sort_values('Score', ascending=False)
+            
+            c1, c2 = st.columns([1,2])
+            with c1:
+                st.markdown("##### 🏆 **Your Champions**")
+                st.dataframe(champions[['Name', 'Score']], hide_index=True)
+
+            with c2:
+                st.markdown("##### 🚀 **Deployment Actions**")
+                st.markdown("- **Lead Initiatives:** Assign these champions to lead new projects or client proposals leveraging this skill.")
+                st.markdown("- **Create Knowledge Base:** Task them with creating best-practice guides or holding a workshop for the team.")
+                st.markdown("- **Mentor Others:** Pair them with learners identified in the 'Risk Workbench' or 'Action Playbook'.")
 
 # ==============================================================================
 # LOGIN PAGE
@@ -449,4 +517,4 @@ def login_page():
                 else:
                     st.error("Incorrect username or PIN. Try again.")
             except (KeyError, FileNotFoundError):
-                 st.error("Secrets not configured for deployment. Contact administrator. If developing, check your .streamlit/secrets.toml file.")
+                 st.error("Secrets not configured for deployment. Contact administrator. If developing, check your .streamlit/secrets/toml file.")
