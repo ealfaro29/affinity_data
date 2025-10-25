@@ -74,7 +74,6 @@ def render_strategic_overview(
             else:
                 st.info("No comment data found.")
 
-# --- EDIT: RE-ADDED render_affinity_status ---
 def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
     """Renders the Affinity license and feedback tab."""
     st.header("⭐ Affinity Status & Team Feedback")
@@ -263,15 +262,14 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
 
 # ==============================================================================
-# NEW MERGED ACTION TAB
+# STREAMLINED ACTION TAB
 # ==============================================================================
 def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     """Renders the risk, opportunity, and group builder workbench."""
     st.header("🔭 Action Workbench")
-    st.info("Use these tools to mitigate risks, deploy strengths, and build training groups.")
+    st.info("Use these tools to mitigate risks and build training groups.")
 
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
-    opportunity_df: pd.DataFrame = analytics.get('opportunity_lens', pd.DataFrame())
     talent_pipeline: pd.DataFrame = analytics.get('talent_pipeline', pd.DataFrame())
     df_merged: pd.DataFrame = analytics.get('df_merged_for_lookup')
 
@@ -279,7 +277,8 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         st.error("Required data not available for this module.")
         return
 
-    sub_tabs = st.tabs(["🚨 Risk Mitigation", "💡 Strength Deployment", "👥 Group Builder"])
+    # --- EDIT: Removed "Strength Deployment" tab ---
+    sub_tabs = st.tabs(["🚨 Risk Mitigation", "👥 Group Builder"])
 
     with sub_tabs[0]:
         st.subheader("🚨 Risk Mitigation Workbench")
@@ -328,39 +327,9 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                     else:
                         st.error("No experts available to mentor this skill.")
 
+    # --- EDIT: Removed "Strength Deployment" tab ---
+
     with sub_tabs[1]:
-        st.subheader("💡 Strength Deployment Planner")
-        st.markdown("**Goal:** Identify your champions and deploy them strategically.")
-        
-        if opportunity_df.empty:
-            st.info("No significant team strengths identified to form a deployment plan.")
-        else:
-            selected_strength = st.selectbox(
-                "Select a strategic strength to deploy:",
-                options=opportunity_df.index,
-                format_func=lambda x: f"{x} (Competency Score: {opportunity_df.loc[x, 'Competency_Score']:.2f})"
-            )
-
-            if selected_strength:
-                st.success(f"**Deployment Plan for: {selected_strength}**")
-
-                champions = df_merged[
-                    (df_merged['Task_Prefixed'] == selected_strength) & 
-                    (df_merged['Score'] >= config.EXPERT_THRESHOLD)
-                ].sort_values('Score', ascending=False)
-                
-                c1, c2 = st.columns([1,2])
-                with c1:
-                    st.markdown("##### 🏆 **Your Champions**")
-                    st.dataframe(champions[['Name', 'Score']], hide_index=True)
-
-                with c2:
-                    st.markdown("##### 🚀 **Deployment Actions**")
-                    st.markdown("- **Lead Initiatives:** Assign these champions to lead new projects or client proposals leveraging this skill.")
-                    st.markdown("- **Create Knowledge Base:** Task them with creating best-practice guides or holding a workshop for the team.")
-                    st.markdown("- **Mentor Others:** Pair them with learners identified in the 'Risk Workbench' or 'Action Playbook'.")
-
-    with sub_tabs[2]:
         st.subheader("👥 Custom Training Group Builder")
         st.markdown("**Goal:** Manually create training groups for any skill.")
         with st.form("group_builder_form"):

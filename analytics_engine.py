@@ -58,7 +58,7 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     task_summary['SPOF'] = task_summary['Expert_Count'] == 1
     task_summary['Competency_Score'] = task_summary['Avg_Score'] * (task_summary['Expert_Count'] + 1)
 
-    # 3. License expiration risk overlay (This is used in the `task_summary` logic, so it stays)
+    # 3. License expiration risk overlay
     experts_df = df[df['Score'] >= config.EXPERT_THRESHOLD][['Name', 'Task_Prefixed']]
     experts_with_exp = pd.merge(experts_df, user_df[['Name', 'License Expiration']], on='Name', how='left')
     
@@ -75,12 +75,9 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     analytics['risk_radar'] = task_summary.sort_values(by='Risk Index', ascending=False)
     analytics['risk_matrix'] = task_summary[task_summary['Risk Index'] > config.HIGH_RISK_INDEX]
 
-    # 4. Opportunity Lens: Identify over-strengths
-    analytics['opportunity_lens'] = task_summary[
-        task_summary['Avg_Score'] >= config.OPPORTUNITY_AVG_SCORE
-    ].sort_values('Competency_Score', ascending=False)
+    # --- EDIT: Removed 'opportunity_lens' calculation ---
 
-    # 5. Talent pipeline: medium performers in critical tasks
+    # 4. Talent pipeline: medium performers in critical tasks
     critical_tasks = task_summary[task_summary['Avg_Score'] < config.CRITICAL_AVG_SCORE].index
     pipeline_candidates = df[
         df['Task_Prefixed'].isin(critical_tasks) & 
@@ -88,8 +85,6 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     ]
     pipeline_candidates = pd.merge(pipeline_candidates, person_summary.reset_index()[['Name', 'Archetype']], on='Name')
     analytics['talent_pipeline'] = pipeline_candidates[['Name', 'Archetype', 'Task_Prefixed', 'Score']].sort_values('Score', ascending=False)
-
-    # --- EDIT: Removed 'skill_correlation' calculation ---
 
     return analytics
 
