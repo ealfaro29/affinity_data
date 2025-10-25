@@ -11,17 +11,17 @@ from typing import Dict, Any
 import config
 
 # ==============================================================================
-# STREAMLINED UI COMPONENTS
+# STREAMLINED UI COMPONENTS (With Visual Enhancements)
 # ==============================================================================
 
 def render_strategic_overview(
-    df_merged: pd.DataFrame, 
-    user_df: pd.DataFrame, 
-    analytics: Dict[str, Any], 
-    total_participants_in_file: int, 
+    df_merged: pd.DataFrame,
+    user_df: pd.DataFrame,
+    analytics: Dict[str, Any],
+    total_participants_in_file: int,
     score_parsing_errors: int
 ):
-    """Renders the high-level dashboard tab."""
+    """Renders the high-level dashboard tab with visual enhancements."""
     risk_radar: pd.DataFrame = analytics.get('risk_radar', pd.DataFrame())
     theme_counts: pd.DataFrame = analytics.get('comment_themes', pd.DataFrame())
 
@@ -32,10 +32,10 @@ def render_strategic_overview(
             kpi1, kpi2, kpi3 = st.columns(3)
             active_participants_count = df_merged['Name'].nunique()
             kpi1.metric("People in File", total_participants_in_file)
-            
+
             response_rate = active_participants_count / total_participants_in_file if total_participants_in_file > 0 else 0
             kpi2.metric("Active Participants", active_participants_count, f"{response_rate:.0%} Response Rate")
-            
+
             avg_confidence = df_merged['Score'].mean() if not df_merged.empty else 0
             kpi3.metric("Average Confidence", f"{avg_confidence:.1%}")
 
@@ -43,8 +43,30 @@ def render_strategic_overview(
             st.subheader("🚨 Skill Risk Radar")
             st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
-                for _, row in risk_radar.head(5).iterrows():
-                    st.metric(label=row.name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
+                # Display metrics first
+                risk_data_head = risk_radar.head(5)
+                for skill_name, row in risk_data_head.iterrows():
+                    st.metric(label=skill_name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
+
+                # --- VISUAL ENHANCEMENT 1: Add Bar Chart for Risk Radar ---
+                st.markdown("**Risk Visualization**")
+                risk_data_head_reset = risk_data_head.reset_index().rename(columns={'index': 'Task'})
+                # Melt data for grouped bar chart
+                risk_melted = risk_data_head_reset.melt(id_vars='Task', value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'], var_name='Metric', value_name='Value')
+
+                fig_risk_bar = px.bar(
+                    risk_melted,
+                    x='Task',
+                    y='Value',
+                    color='Metric',
+                    barmode='group',
+                    text_auto=True,
+                    height=300,
+                    labels={'Value': 'Count / Index Value', 'Task': 'High-Risk Task'}
+                )
+                fig_risk_bar.update_layout(margin=dict(t=20, b=20, l=0, r=0))
+                st.plotly_chart(fig_risk_bar, use_container_width=True)
+
             else:
                 st.info("No risk data available.")
 
@@ -63,7 +85,7 @@ def render_strategic_overview(
                     st.dataframe(pending_df, hide_index=True)
                 else:
                     st.info("All users completed the assessment.")
-        
+
         with st.container(border=True):
             st.subheader("🗣️ Top Comment Themes")
             st.caption("Top themes from all user comments.")
@@ -75,9 +97,9 @@ def render_strategic_overview(
                 st.info("No comment data found.")
 
 def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
-    """Renders the Affinity license and feedback tab."""
+    """Renders the Affinity license and feedback tab with visual enhancements."""
     st.header("⭐ Affinity Status & Team Feedback")
-    
+
     with st.container(border=True):
         st.subheader("📊 Overall Software Status")
         total_users = len(user_df)
@@ -85,7 +107,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
             k1, k2 = st.columns(2)
             active_pct = user_df['Active License'].sum() / total_users
             k1.metric("Active Affinity Licenses", f"{user_df['Active License'].sum()}", f"{active_pct:.0%} of team")
-            
+
             trained_pct = user_df['Has received Affinity training of McK?'].sum() / total_users
             k2.metric("Received McK Training", f"{user_df['Has received Affinity training of McK?'].sum()}", f"{trained_pct:.0%} of team")
         else:
@@ -97,10 +119,27 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
         exp_df = user_df[user_df['License Expiration'].notna()].copy()
         if not exp_df.empty:
             exp_df['Days Left'] = (exp_df['License Expiration'] - today).dt.days
-            exp_df = exp_df[exp_df['Days Left'] > 0]
+            exp_df = exp_df[exp_df['Days Left'] > 0] # Only show future expirations
             if not exp_df.empty:
                 exp_df['Start'] = today
-                fig = px.timeline(exp_df.sort_values('Days Left'), x_start="Start", x_end="License Expiration", y="Name", text="Days Left", title="Upcoming Expirations")
+
+                # --- VISUAL ENHANCEMENT 2: Color-code Timeline Bars ---
+                def get_color(days_left):
+                    if days_left < 30: return 'red'
+                    elif days_left < 90: return 'orange'
+                    else: return 'green'
+                exp_df['Color'] = exp_df['Days Left'].apply(get_color)
+
+                fig = px.timeline(
+                    exp_df.sort_values('Days Left'),
+                    x_start="Start",
+                    x_end="License Expiration",
+                    y="Name",
+                    text="Days Left",
+                    color="Color", # Use the calculated color
+                    color_discrete_map={"red": "#EF553B", "orange": "#FFA15A", "green": "#00CC96"}, # Define colors explicitly
+                    title="Upcoming Expirations (Colored by Urgency)"
+                )
                 fig.update_yaxes(categoryorder="total ascending")
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -111,7 +150,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
     with st.container(border=True):
         st.subheader("🗣️ All Team Feedback")
         st.caption("Unfiltered comments from the 'Specific Needs' column.")
-        
+
         comments_df = user_df[['Name', 'Comments']].drop_duplicates()
         comments_df = comments_df[comments_df['Comments'] != '']
         if not comments_df.empty:
@@ -121,16 +160,16 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
 
 
 def render_team_profiles(
-    df_merged: pd.DataFrame, 
-    user_df: pd.DataFrame, 
+    df_merged: pd.DataFrame,
+    user_df: pd.DataFrame,
     analytics: Dict[str, Any]
 ):
-    """Renders the deep-dive profile view for each team member."""
+    """Renders the deep-dive profile view with visual enhancements."""
     st.header("👤 Team Profiles")
     person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame())
 
     col1, col2 = st.columns([1, 2], gap="large")
-    
+
     if person_summary.empty:
         st.warning("No summary data available to display team profiles.")
         return
@@ -139,23 +178,23 @@ def render_team_profiles(
         with st.container(border=True):
             st.subheader("📇 Team Roster")
             all_user_names_list = sorted(user_df['Name'].unique())
-            
+
             ranking_df = person_summary.reset_index().sort_values('Avg Score', ascending=False)
             ranking_df['Rank'] = ranking_df['Avg Score'].rank(method='min', ascending=False).astype(int)
-            
+
             merged_ranking = user_df[['Name']].drop_duplicates().merge(
-                ranking_df[['Name', 'Rank', 'Avg Score', 'Archetype']], 
-                on='Name', 
+                ranking_df[['Name', 'Rank', 'Avg Score', 'Archetype']],
+                on='Name',
                 how='left'
             )
             merged_ranking['Assessed'] = merged_ranking['Name'].isin(set(df_merged['Name'].unique()))
             merged_ranking.sort_values('Rank', ascending=True, na_position='last', inplace=True)
-            
+
             selected_person = st.selectbox("Select a Team Member", all_user_names_list, label_visibility="collapsed")
-            
+
             st.dataframe(
-                merged_ranking, 
-                height=750, 
+                merged_ranking,
+                height=750,
                 hide_index=True,
                 column_config={
                     "Assessed": st.column_config.CheckboxColumn("Assessed?", disabled=True),
@@ -166,17 +205,17 @@ def render_team_profiles(
     with col2:
         with st.container(border=True):
             st.header(f"📇 Profile: {selected_person}")
-            
+
             if selected_person not in set(df_merged['Name'].unique()):
                 st.warning(f"**{selected_person} has not completed the self-assessment.**")
-            
+
             elif selected_person not in person_summary.index:
                 st.error(f"Data for {selected_person} is missing from the person summary.")
-            
+
             else:
                 person_stats = person_summary.loc[selected_person]
                 person_data = df_merged[df_merged['Name'] == selected_person].copy()
-                
+
                 rank_val = merged_ranking.loc[merged_ranking['Name'] == selected_person, 'Rank'].iloc[0]
                 rank_display = f"#{int(rank_val)}" if pd.notna(rank_val) else "N/A"
 
@@ -186,93 +225,132 @@ def render_team_profiles(
                 c3.metric("Archetype", person_stats['Archetype'])
                 st.divider()
 
-                team_avg = df_merged.groupby('Category')['Score'].mean()
-                person_avg = person_data.groupby('Category')['Score'].mean().reindex(team_avg.index, fill_value=0)
-                
-                fig = go.Figure()
-                fig.add_trace(go.Scatterpolar(r=person_avg.values, theta=person_avg.index, fill='toself', name=f'{selected_person}'))
-                fig.add_trace(go.Scatterpolar(r=team_avg.values, theta=team_avg.index, fill='toself', name='Team Avg', opacity=0.6))
-                fig.update_layout(title="Confidence vs. Team Average by Category")
-                st.plotly_chart(fig, use_container_width=True)
-                
+                team_avg_scores = df_merged.groupby('Category')['Score'].mean()
+                person_avg_scores = person_data.groupby('Category')['Score'].mean().reindex(team_avg_scores.index, fill_value=0)
+
+                # Ensure consistent order for radar chart categories
+                categories_ordered = sorted(team_avg_scores.index)
+                team_avg_ordered = team_avg_scores.reindex(categories_ordered)
+                person_avg_ordered = person_avg_scores.reindex(categories_ordered)
+
+                fig_radar = go.Figure()
+                fig_radar.add_trace(go.Scatterpolar(r=person_avg_ordered.values, theta=categories_ordered, fill='toself', name=f'{selected_person}'))
+                fig_radar.add_trace(go.Scatterpolar(r=team_avg_ordered.values, theta=categories_ordered, fill='toself', name='Team Avg', opacity=0.6))
+                fig_radar.update_layout(title="Confidence vs. Team Average by Category")
+                st.plotly_chart(fig_radar, use_container_width=True)
+
                 st.markdown("**Strengths & Development Areas**")
-                person_skills = person_data.sort_values('Score', ascending=False).drop_duplicates(subset=['Task_Prefixed'])
-                
+                person_skills = person_data.set_index('Task_Prefixed')['Score'].sort_values(ascending=False)
+                # Get team average for *these specific tasks*
+                team_avg_tasks = df_merged.groupby('Task_Prefixed')['Score'].mean()
+
                 sc1, sc2 = st.columns(2)
                 with sc1:
                     st.markdown("✅ **Top 5 Skills**")
-                    st.dataframe(
-                        person_skills.head(5)[['Task_Prefixed', 'Score']], 
-                        hide_index=True,
-                        column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)}
-                    )
+                    top_5 = person_skills.head(5).reset_index()
+                    # --- VISUAL ENHANCEMENT 3a: Replace Table with Bar Chart ---
+                    fig_top = px.bar(
+                        top_5,
+                        y='Task_Prefixed',
+                        x='Score',
+                        orientation='h',
+                        text='Score',
+                        height=250,
+                        title="Top 5 Skills"
+                        )
+                    fig_top.update_traces(texttemplate='%{x:.0%}', textposition='outside')
+                    fig_top.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=30,b=0))
+                    # Add team average line? Maybe too cluttered. Let's omit for now.
+                    st.plotly_chart(fig_top, use_container_width=True)
+
                 with sc2:
                     st.markdown("🌱 **Top 5 Improvement Areas**")
-                    st.dataframe(
-                        person_skills.tail(5)[['Task_Prefixed', 'Score']].sort_values('Score', ascending=True), 
-                        hide_index=True,
-                        column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)}
-                    )
+                    bottom_5 = person_skills.tail(5).sort_values(ascending=True).reset_index() # Sort ascending for chart
+                    # --- VISUAL ENHANCEMENT 3b: Replace Table with Bar Chart ---
+                    fig_bottom = px.bar(
+                        bottom_5,
+                        y='Task_Prefixed',
+                        x='Score',
+                        orientation='h',
+                        text='Score',
+                        height=250,
+                        title="Top 5 Improvement Areas"
+                        )
+                    fig_bottom.update_traces(texttemplate='%{x:.0%}', textposition='outside')
+                    fig_bottom.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=30,b=0))
+                    st.plotly_chart(fig_bottom, use_container_width=True)
 
 
 def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     """
-    Renders the deep-dive analysis by skill/category.
+    Renders the deep-dive analysis by skill/category with visual enhancements.
     """
     st.header("🧠 Skill Analysis")
-    
+
     st.subheader("Deep Dive by Skill or Category")
     analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
-    
+
     if analysis_type == "Task":
         options = sorted(df_merged['Task_Prefixed'].unique())
         label, filter_col = "Select Task(s)", 'Task_Prefixed'
     else:
         options = sorted(df_merged['Category'].unique())
         label, filter_col = "Select Category(s)", 'Category'
-        
+
     selected = st.multiselect(label, options, default=options[0] if options else None)
-    
+
     if not selected:
         st.warning(f"Please select at least one {analysis_type}.")
     else:
         skill_data = df_merged[df_merged[filter_col].isin(selected)]
-        
+        avg_score_selected = skill_data['Score'].mean() # Calculate average for selected skill/category
+
         c1, c2, c3 = st.columns(3)
-        c1.metric("Avg Confidence", f"{skill_data['Score'].mean():.1%}")
+        c1.metric("Avg Confidence", f"{avg_score_selected:.1%}")
         c2.metric("Experts (≥80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
         c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < config.BEGINNER_THRESHOLD]['Name'].nunique())
         st.divider()
-        
+
         s1, s2 = st.columns(2)
         with s1:
             st.markdown("**Skill Leaderboard**")
             leaderboard = skill_data.groupby('Name')['Score'].mean().sort_values(ascending=False).reset_index()
             st.dataframe(
-                leaderboard, 
+                leaderboard,
                 hide_index=True,
                 column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)}
             )
         with s2:
             st.markdown("**Score Distribution**")
-            fig = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution")
-            fig.update_layout(height=350, margin=dict(t=20, b=20), showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            fig_hist = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution")
+            fig_hist.update_layout(height=350, margin=dict(t=30, b=20), showlegend=False)
+
+            # --- VISUAL ENHANCEMENT 4: Add Average Line to Histogram ---
+            fig_hist.add_vline(
+                x=avg_score_selected,
+                line_width=2,
+                line_dash="dash",
+                line_color="red",
+                annotation_text=f"Avg: {avg_score_selected:.1%}",
+                annotation_position="top left"
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
 
 
 # ==============================================================================
 # STREAMLINED ACTION TAB
 # ==============================================================================
 def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
-    """Renders the risk mitigation and group builder workbench."""
+    """Renders the risk mitigation and group builder workbench with visual enhancements."""
     st.header("🔭 Action Workbench")
     st.info("Use these tools to mitigate risks and build training groups.")
 
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
     talent_pipeline: pd.DataFrame = analytics.get('talent_pipeline', pd.DataFrame())
     df_merged_lookup: pd.DataFrame = analytics.get('df_merged_for_lookup')
+    person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame()) # Needed for Archetype
 
-    if df_merged_lookup is None:
+    if df_merged_lookup is None or person_summary is None:
         st.error("Required data not available for this module.")
         return
 
@@ -291,7 +369,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                 options=high_risk_skills.index,
                 format_func=lambda x: f"{x} (Risk Index: {high_risk_skills.loc[x, 'Risk Index']:.2f})"
             )
-            
+
             if selected_risk:
                 st.error(f"**Analysis for: {selected_risk}**")
                 risk_info = high_risk_skills.loc[selected_risk]
@@ -302,26 +380,38 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
                 st.markdown("---")
                 st.subheader("Action Plan")
-                
+
                 c1, c2 = st.columns(2)
                 with c1:
                     st.markdown("##### 🌱 **Upskill Talent Pipeline**")
                     st.caption("People with 60-79% confidence in this skill.")
                     pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
                     if not pipeline_for_skill.empty:
+                        # Display Archetype here too if useful
                         st.dataframe(pipeline_for_skill[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True)
                     else:
                         st.warning("No candidates in the immediate pipeline. Broaden search.")
-                
+
                 with c2:
                     st.markdown("##### 🤝 **Assign Mentors**")
                     st.caption("Experts (≥80%) available to mentor this skill.")
-                    all_experts = df_merged_lookup[ 
-                        (df_merged_lookup['Task_Prefixed'] == selected_risk) & 
+                    all_experts = df_merged_lookup[
+                        (df_merged_lookup['Task_Prefixed'] == selected_risk) &
                         (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
                     ]
                     if not all_experts.empty:
-                        st.dataframe(all_experts[['Name', 'Score']].sort_values('Score', ascending=False), hide_index=True, use_container_width=True)
+                        # --- VISUAL ENHANCEMENT 5: Add Archetype to Mentors Table ---
+                        experts_with_archetype = pd.merge(
+                            all_experts[['Name', 'Score']].drop_duplicates(subset=['Name']), # Avoid duplicate names if expert in multiple related tasks
+                            person_summary[['Archetype']],
+                            left_on='Name',
+                            right_index=True,
+                            how='left'
+                        )
+                        st.dataframe(
+                            experts_with_archetype[['Name', 'Archetype', 'Score']].sort_values('Score', ascending=False),
+                            hide_index=True, use_container_width=True
+                        )
                     else:
                         st.error("No experts available to mentor this skill.")
 
@@ -329,7 +419,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         st.subheader("👥 Custom Training Group Builder")
         st.markdown("**Goal:** Manually create training groups for any skill.")
         with st.form("group_builder_form"):
-            all_tasks = sorted(df_merged_lookup['Task_Prefixed'].unique()) 
+            all_tasks = sorted(df_merged_lookup['Task_Prefixed'].unique())
             selected_task = st.selectbox(
                 "Select a skill for the training session:",
                 all_tasks, index=0 if all_tasks else None
@@ -344,41 +434,43 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                     st.error("Please select a skill.")
                 else:
                     st.subheader(f"✅ Generated Groups for: {selected_task}")
-                    filtered_df = df_merged_lookup[df_merged_lookup['Task_Prefixed'] == selected_task] 
-                    
+                    filtered_df = df_merged_lookup[df_merged_lookup['Task_Prefixed'] == selected_task]
+
                     if filtered_df.empty:
                         st.error("No participants found for the selected criteria.")
                     else:
                         group_scores = filtered_df.groupby('Name')['Score'].mean().sort_values()
                         mentors = group_scores[group_scores >= config.EXPERT_THRESHOLD].sort_values(ascending=False)
                         learners = group_scores[group_scores < config.EXPERT_THRESHOLD].sort_values(ascending=True)
-                        
+
                         cols = st.columns(num_groups)
                         assigned = set()
-                        
+
                         for i in range(num_groups):
                             with cols[i]:
                                 with st.container(border=True):
                                     st.markdown(f"**Group {i+1}**")
                                     group_data = []
-                                    
+
                                     if add_mentors:
                                         available_mentors = mentors[~mentors.index.isin(assigned)]
                                         if not available_mentors.empty:
                                             m_name = available_mentors.index[0]
                                             group_data.append({'Role': '🏆 Mentor', 'Name': m_name, 'Score': f"{available_mentors.iloc[0]:.1%}"})
                                             assigned.add(m_name)
-                                    
+
                                     needed = num_per_group - len(group_data)
                                     if needed > 0:
                                         group_learners = learners[~learners.index.isin(assigned)].head(needed)
                                         for name, score in group_learners.items():
                                             group_data.append({'Role': '🌱 Learner', 'Name': name, 'Score': f"{score:.1%}"})
                                             assigned.add(name)
-                                    
+
                                     if group_data:
                                         st.dataframe(pd.DataFrame(group_data), hide_index=True, use_container_width=True)
                                     else:
                                         st.warning(f"Not enough people to form Group {i+1}.")
 
-# --- EDIT: Removed login_page function ---
+# ==============================================================================
+# LOGIN PAGE (Removed - function definition deleted)
+# ==============================================================================

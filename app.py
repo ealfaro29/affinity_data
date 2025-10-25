@@ -20,7 +20,7 @@ from typing import Dict, Any
 # Page configuration
 st.set_page_config(
     # --- EDIT: Version bump ---
-    page_title="Affinity Skills Hub",
+    page_title="Team Skills Hub v3.2",
     layout="wide"
     # --- EDIT: Removed initial_sidebar_state ---
 )
@@ -39,7 +39,7 @@ def upload_landing_page():
     st.markdown("Download templates and guides to help you prepare your data.")
 
     col1, col2 = st.columns(2, gap="large")
-    
+
     with col1:
         with st.container(border=True):
             st.markdown("#### 📥 CSV Data Template")
@@ -57,7 +57,7 @@ def upload_landing_page():
             except Exception as e:
                 st.error(f"Could not generate CSV template: {e}")
                 st.info("Ensure the `tasks.json` file is present.")
-        
+
     with col2:
         with st.container(border=True):
             st.markdown("#### 📄 Task Reference Guide")
@@ -81,19 +81,19 @@ def upload_landing_page():
     with st.container(border=True):
         st.subheader("Step 2: Upload Your Data File")
         st.markdown("Upload your completed `userData.csv` file here to begin the analysis.")
-        
+
         uploaded_csv = st.file_uploader(
-            "Upload your `userData.csv` file (or the one filled using the template)", 
+            "Upload your `userData.csv` file (or the one filled using the template)",
             type="csv",
             label_visibility="collapsed"
         )
 
     # --- AUTO-SUBMIT LOGIC ---
     if uploaded_csv is not None:
-        if 'processed_data' not in st.session_state: 
+        if 'processed_data' not in st.session_state:
             with st.spinner(f"Processing '{uploaded_csv.name}'... This might take a moment."):
                 data = load_and_process_data(uploaded_csv, tasks_json_path)
-            
+
             if data is not None and not data['merged_df'].empty:
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
@@ -107,14 +107,14 @@ def upload_landing_page():
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
                     del st.session_state.processed_data
-        
+
         elif st.session_state.data_loaded:
             st.rerun()
 
 
 def main_app():
     """Renders the main application interface."""
-    
+
     if 'processed_data' not in st.session_state:
         st.error("Data not found. Please upload again.")
         st.session_state.data_loaded = False
@@ -122,8 +122,6 @@ def main_app():
         return
 
     data = st.session_state.processed_data
-    
-    # --- EDIT: Removed Sidebar ---
 
     # --- Extract data ---
     df_merged: pd.DataFrame = data['merged_df']
@@ -137,16 +135,16 @@ def main_app():
 
     # --- Analytics Engine ---
     analytics: Dict[str, Any] = compute_analytics(df_merged, user_df)
-    
+
     all_comments = user_df['Comments'].dropna().str.strip()
     all_comments = all_comments[all_comments != '']
     if not all_comments.empty:
         analytics['comment_themes'] = analyze_comment_themes(all_comments)
     else:
         analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
-    
+
     # --- UI Rendering ---
-    st.title("🚀 Affinity Skills Hub") # Version bump
+    st.title("🚀 Team Skills Hub v3.2") # Version bump
 
     tabs = st.tabs([
         "📈 Strategic Overview",
@@ -163,20 +161,18 @@ def main_app():
     with tabs[2]:
         render_team_profiles(df_merged, user_df, analytics)
     with tabs[3]:
-        render_skill_analysis(df_merged, analytics) # Corrected function signature
+        # --- EDIT: Corrected function call ---
+        render_skill_analysis(df_merged, analytics)
     with tabs[4]:
         render_action_workbench(df_merged, analytics)
 
 
 # --- Main execution (State Machine) ---
 if __name__ == "__main__":
-    
-    # Initialize session state key
+
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
-    # --- EDIT: Removed logged_in state ---
-        
-    # --- EDIT: Simplified state check ---
+
     if not st.session_state.data_loaded:
         upload_landing_page()
     else:
