@@ -5,7 +5,7 @@
 import streamlit as st
 import pandas as pd
 from config import DEVELOPMENT_MODE
-# --- EDIT: Importar la nueva función ---
+# --- Ensure this import matches the function name below ---
 from data_engine import load_and_process_data, generate_csv_template
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
@@ -35,13 +35,12 @@ def upload_landing_page():
 
     tasks_json_path = "tasks.json" 
 
-    # --- EDIT: Nueva sección para descargar la plantilla ---
     with st.container(border=True):
         st.subheader("Paso 1: Descarga la Plantilla (Opcional)")
         st.markdown("Si no tienes un archivo, descarga la plantilla para llenarla con tus datos. El archivo ya tiene las columnas y el formato correcto.")
         
         try:
-            # Generar la plantilla en memoria
+            # --- Ensure this function call matches the name below ---
             template_csv = generate_csv_template(tasks_json_path)
             st.download_button(
                 label="📥 Descargar Plantilla CSV",
@@ -54,7 +53,6 @@ def upload_landing_page():
             st.error(f"No se pudo generar la plantilla: {e}")
             st.info("Asegúrate de que el archivo `tasks.json` esté presente en el directorio de la app.")
 
-    # --- EDIT: Cambiado a "Paso 2" ---
     with st.container(border=True):
         st.subheader("Paso 2: Sube tu Archivo de Datos")
         
