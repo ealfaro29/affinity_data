@@ -40,7 +40,7 @@ def upload_landing_page():
 
     with st.container(border=True):
         st.subheader("1. Upload Your Data")
-        st.info("ℹ️ Your `tasks.json` file is loaded automatically. Please upload your `userData.csv` file to proceed.")
+        # --- EDIT: Removed the st.info line ---
         
         uploaded_csv = st.file_uploader(
             "Upload your User Data CSV file", 
