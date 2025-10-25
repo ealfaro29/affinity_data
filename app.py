@@ -4,7 +4,7 @@
 
 import streamlit as st
 import pandas as pd
-from config import DEVELOPMENT_MODE
+# --- EDIT: Removed DEVELOPMENT_MODE import ---
 from data_engine import load_and_process_data, generate_csv_template, generate_task_guide
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
@@ -12,36 +12,36 @@ from ui_components import (
     render_affinity_status,
     render_team_profiles,
     render_skill_analysis,
-    render_action_workbench,
-    login_page
+    render_action_workbench
+    # --- EDIT: Removed login_page import ---
 )
 from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.1",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    # --- EDIT: Version bump ---
+    page_title="Team Skills Hub v3.2",
+    layout="wide"
+    # --- EDIT: Removed initial_sidebar_state ---
 )
 
 def upload_landing_page():
     """
-    Renders the file upload screen. This page is shown after login
-    but before data is loaded.
+    Renders the file upload screen. This page is shown
+    when no data is loaded.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
     st.markdown("Follow the steps to analyze your team's skills.")
 
     tasks_json_path = "tasks.json"
 
-    # --- REVISED UI FOR DOWNLOADS (incorporating sketch ideas) ---
     st.subheader("Step 1: Get Resources (Optional)")
     st.markdown("Download templates and guides to help you prepare your data.")
 
-    col1, col2 = st.columns(2, gap="large") # Use columns to align download cards
+    col1, col2 = st.columns(2, gap="large")
     
     with col1:
-        with st.container(border=True): # Card for CSV Template
+        with st.container(border=True):
             st.markdown("#### 📥 CSV Data Template")
             st.markdown("Use this pre-formatted CSV file to manually enter your team's skill data. It includes all required columns and an example row.")
             try:
@@ -59,7 +59,7 @@ def upload_landing_page():
                 st.info("Ensure the `tasks.json` file is present.")
         
     with col2:
-        with st.container(border=True): # Card for Task Guide
+        with st.container(border=True):
             st.markdown("#### 📄 Task Reference Guide")
             st.markdown("Download a plain text file listing all the tasks (skills) and their IDs that are part of this assessment.")
             try:
@@ -76,7 +76,7 @@ def upload_landing_page():
                 st.error(f"Could not generate task guide: {e}")
                 st.info("Ensure the `tasks.json` file is present.")
 
-    st.markdown("---") # Separator between downloads and upload
+    st.markdown("---")
 
     with st.container(border=True):
         st.subheader("Step 2: Upload Your Data File")
@@ -88,7 +88,7 @@ def upload_landing_page():
             label_visibility="collapsed"
         )
 
-    # --- AUTO-SUBMIT LOGIC (remains unchanged) ---
+    # --- AUTO-SUBMIT LOGIC ---
     if uploaded_csv is not None:
         if 'processed_data' not in st.session_state: 
             with st.spinner(f"Processing '{uploaded_csv.name}'... This might take a moment."):
@@ -123,15 +123,7 @@ def main_app():
 
     data = st.session_state.processed_data
     
-    # --- Sidebar ---
-    st.sidebar.title("🚀 Team Skills Hub")
-    st.sidebar.info("A strategic platform for talent intelligence and team development.")
-    
-    if st.sidebar.button("Upload New Data"):
-        st.session_state.data_loaded = False
-        if 'processed_data' in st.session_state:
-            del st.session_state.processed_data
-        st.rerun()
+    # --- EDIT: Removed Sidebar ---
 
     # --- Extract data ---
     df_merged: pd.DataFrame = data['merged_df']
@@ -154,7 +146,7 @@ def main_app():
         analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
     
     # --- UI Rendering ---
-    st.title("🚀 Team Skills Hub v3.1")
+    st.title("🚀 Team Skills Hub v3.2") # Version bump
 
     tabs = st.tabs([
         "📈 Strategic Overview",
@@ -171,7 +163,7 @@ def main_app():
     with tabs[2]:
         render_team_profiles(df_merged, user_df, analytics)
     with tabs[3]:
-        render_skill_analysis(df_merged, user_df, analytics) # Added user_df here
+        render_skill_analysis(df_merged, analytics) # Corrected function signature
     with tabs[4]:
         render_action_workbench(df_merged, analytics)
 
@@ -179,17 +171,13 @@ def main_app():
 # --- Main execution (State Machine) ---
 if __name__ == "__main__":
     
+    # Initialize session state key
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
+    # --- EDIT: Removed logged_in state ---
         
-    if DEVELOPMENT_MODE:
-        st.session_state.logged_in = True 
-
-    if not st.session_state.logged_in:
-        login_page()
-    elif not st.session_state.data_loaded:
+    # --- EDIT: Simplified state check ---
+    if not st.session_state.data_loaded:
         upload_landing_page()
     else:
         main_app()

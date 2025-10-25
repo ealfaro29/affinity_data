@@ -8,10 +8,10 @@ import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime
 from typing import Dict, Any
-import config  # Import the centralized configuration
+import config
 
 # ==============================================================================
-# STREAMLINED UI COMPONENTS (Mostly English already)
+# STREAMLINED UI COMPONENTS
 # ==============================================================================
 
 def render_strategic_overview(
@@ -270,7 +270,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
     talent_pipeline: pd.DataFrame = analytics.get('talent_pipeline', pd.DataFrame())
-    df_merged_lookup: pd.DataFrame = analytics.get('df_merged_for_lookup') # Use a distinct name
+    df_merged_lookup: pd.DataFrame = analytics.get('df_merged_for_lookup')
 
     if df_merged_lookup is None:
         st.error("Required data not available for this module.")
@@ -316,7 +316,6 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                 with c2:
                     st.markdown("##### 🤝 **Assign Mentors**")
                     st.caption("Experts (≥80%) available to mentor this skill.")
-                    # Use the lookup dataframe here
                     all_experts = df_merged_lookup[ 
                         (df_merged_lookup['Task_Prefixed'] == selected_risk) & 
                         (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
@@ -330,7 +329,6 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         st.subheader("👥 Custom Training Group Builder")
         st.markdown("**Goal:** Manually create training groups for any skill.")
         with st.form("group_builder_form"):
-            # Use the lookup dataframe here
             all_tasks = sorted(df_merged_lookup['Task_Prefixed'].unique()) 
             selected_task = st.selectbox(
                 "Select a skill for the training session:",
@@ -346,7 +344,6 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                     st.error("Please select a skill.")
                 else:
                     st.subheader(f"✅ Generated Groups for: {selected_task}")
-                    # Use the lookup dataframe here
                     filtered_df = df_merged_lookup[df_merged_lookup['Task_Prefixed'] == selected_task] 
                     
                     if filtered_df.empty:
@@ -384,26 +381,4 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                                     else:
                                         st.warning(f"Not enough people to form Group {i+1}.")
 
-# ==============================================================================
-# LOGIN PAGE
-# ==============================================================================
-def login_page():
-    """Displays the login form."""
-    st.title("🔐 Team Skills Hub Login")
-    with st.form("login_form"):
-        username = st.text_input("Username").lower()
-        password = st.text_input("PIN", type="password")
-        submitted = st.form_submit_button("Log In")
-        
-        if submitted:
-            try:
-                correct_username = st.secrets["credentials"]["username"]
-                correct_password = st.secrets["credentials"]["password"]
-                
-                if username == correct_username and password == correct_password:
-                    st.session_state.logged_in = True
-                    st.rerun()
-                else:
-                    st.error("Incorrect username or PIN. Try again.")
-            except (KeyError, FileNotFoundError):
-                 st.error("Secrets not configured for deployment. Contact administrator. If developing, check your .streamlit/secrets.toml file.")
+# --- EDIT: Removed login_page function ---
