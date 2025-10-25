@@ -26,15 +26,15 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
         tasks_df.rename(columns={'title': 'Task', 'id': 'task_id', 'category': 'Category'}, inplace=True)
     except FileNotFoundError:
-        st.error(f"Critical error: tasks.json not found at path: {tasks_json_path}")
+        st.error(f"Error Crítico: No se encontró tasks.json en la ruta: {tasks_json_path}")
         return None
     except Exception as e:
-        st.error(f"Critical error reading tasks.json: {e}")
+        st.error(f"Error Crítico al leer tasks.json: {e}")
         return None
         
     # --- DYNAMIC TASK LOADING (ENHANCEMENT) ---
     if 'task_id' not in tasks_df.columns:
-        st.error("Critical error: 'task_id' (from 'id') not found in tasks.json.")
+        st.error("Error Crítico: 'task_id' (de 'id') no se encontró en tasks.json.")
         return None
         
     task_cols = [f'Task {i}' for i in tasks_df['task_id']]
@@ -42,12 +42,10 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
 
     # Read uploaded user_csv_file → user_df
     try:
-        # --- THIS IS THE KEY CHANGE ---
         user_df = pd.read_csv(user_csv_file, sep=';', encoding='utf-8-sig')
-        # ----------------------------
         
     except Exception as e:
-        st.error(f"Critical error reading uploaded userData.csv: {e}")
+        st.error(f"Error Crítico al leer el userData.csv subido: {e}")
         return None
 
     # Normalize headers and key columns
@@ -87,7 +85,7 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
     id_vars = [c for c in user_df.columns if c not in task_cols]
     
     if not present_task_cols:
-        st.error("No 'Task X' columns found in the uploaded userData.csv.")
+        st.error("No se encontraron columnas 'Task X' en el userData.csv subido.")
         return None
         
     df_long = pd.melt(user_df, id_vars=id_vars, value_vars=present_task_cols, var_name='task_id_str', value_name='Score')
@@ -120,3 +118,55 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         'total_count': total_names_in_file,
         'parsing_errors': parsing_errors,
     }
+
+# --- NUEVA FUNCIÓN ---
+@st.cache_data
+def generate_csv_template(tasks_json_path: str) -> str:
+    """
+    Genera un string CSV de plantilla basado en las columnas requeridas y las tareas de tasks.json.
+    """
+    # Leer tasks.json para obtener la lista de tareas
+    try:
+        tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
+        tasks_df.rename(columns={'id': 'task_id'}, inplace=True)
+        task_cols = [f'Task {i}' for i in tasks_df['task_id']]
+    except Exception as e:
+        # Fallback por si tasks.json no está disponible
+        st.warning(f"No se pudo leer tasks.json para generar la plantilla ({e}). Usando 31 tareas por defecto.")
+        task_cols = [f'Task {i}' for i in range(1, 32)]
+
+    # Definir las cabeceras base
+    base_headers = [
+        'BPS', 
+        'Team Leader', 
+        'Active License', 
+        'License Expiration ', # El espacio es intencional para coincidir con el data_engine
+        'Has received Affinity training of McK?', 
+        'Scheduler tag', 
+        'Specific Needs'
+    ]
+    
+    all_headers = base_headers + task_cols
+    
+    # Crear un DataFrame vacío con estas columnas
+    template_df = pd.DataFrame(columns=all_headers)
+    
+    # Añadir una fila de ejemplo
+    example_row = {
+        'BPS': 'Nombre Apellido',
+        'Team Leader': 'Nombre del Líder',
+        'Active License': 'Yes',
+        'License Expiration ': '25.10.2026',
+        'Has received Affinity training of McK?': 'No',
+        'Scheduler tag': 'No',
+        'Specific Needs': 'Necesita ayuda con isométricos',
+    }
+    # Añadir puntuaciones de ejemplo para las tareas
+    for col in task_cols:
+        example_row[col] = '50%'
+
+    # Añadir la fila de ejemplo al DataFrame
+    template_df = pd.concat([template_df, pd.DataFrame([example_row])], ignore_index=True)
+    
+    # Convertir a CSV en formato string, usando el mismo separador y codificación
+    return template_df.to_csv(sep=';', index=False, encoding='utf-8-sig')

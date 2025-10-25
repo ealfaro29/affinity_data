@@ -5,11 +5,12 @@
 import streamlit as st
 import pandas as pd
 from config import DEVELOPMENT_MODE
-from data_engine import load_and_process_data
+# --- EDIT: Importar la nueva función ---
+from data_engine import load_and_process_data, generate_csv_template
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
     render_strategic_overview,
-    render_affinity_status,  # <-- RE-ADDED
+    render_affinity_status,
     render_team_profiles,
     render_skill_analysis,
     render_action_workbench,
@@ -19,7 +20,7 @@ from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.1", # Version bump
+    page_title="Team Skills Hub v3.1",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -30,15 +31,35 @@ def upload_landing_page():
     but before data is loaded.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
-    st.markdown("Please upload your team's skill data to begin the analysis.")
+    st.markdown("Sigue los pasos para analizar los skills de tu equipo.")
 
     tasks_json_path = "tasks.json" 
 
+    # --- EDIT: Nueva sección para descargar la plantilla ---
     with st.container(border=True):
-        st.subheader("1. Upload Your Data")
+        st.subheader("Paso 1: Descarga la Plantilla (Opcional)")
+        st.markdown("Si no tienes un archivo, descarga la plantilla para llenarla con tus datos. El archivo ya tiene las columnas y el formato correcto.")
+        
+        try:
+            # Generar la plantilla en memoria
+            template_csv = generate_csv_template(tasks_json_path)
+            st.download_button(
+                label="📥 Descargar Plantilla CSV",
+                data=template_csv,
+                file_name="skills_template.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"No se pudo generar la plantilla: {e}")
+            st.info("Asegúrate de que el archivo `tasks.json` esté presente en el directorio de la app.")
+
+    # --- EDIT: Cambiado a "Paso 2" ---
+    with st.container(border=True):
+        st.subheader("Paso 2: Sube tu Archivo de Datos")
         
         uploaded_csv = st.file_uploader(
-            "Upload your User Data CSV file", 
+            "Sube tu archivo `userData.csv` (o el que llenaste con la plantilla)", 
             type="csv",
             label_visibility="collapsed"
         )
@@ -46,19 +67,19 @@ def upload_landing_page():
     # --- AUTO-SUBMIT LOGIC ---
     if uploaded_csv is not None:
         if 'processed_data' not in st.session_state: 
-            with st.spinner(f"Processing '{uploaded_csv.name}'... This may take a moment."):
+            with st.spinner(f"Procesando '{uploaded_csv.name}'... Esto puede tardar un momento."):
                 data = load_and_process_data(uploaded_csv, tasks_json_path)
             
             if data is not None and not data['merged_df'].empty:
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
-                st.success("Data loaded successfully! 🎉")
+                st.success("¡Datos cargados con éxito! 🎉")
                 st.rerun()
             elif data is not None and data['merged_df'].empty:
-                st.error("Processing complete, but no valid skill data was found in the file. Please check your file and upload again.")
+                st.error("Proceso completado, pero no se encontraron datos de skills válidos en el archivo. Revisa tu archivo y súbelo de nuevo.")
                 st.session_state.data_loaded = False
             else:
-                st.error("There was an error processing your file. Please check the file format and column names.")
+                st.error("Hubo un error procesando tu archivo. Revisa el formato y los nombres de las columnas.")
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
                     del st.session_state.processed_data
@@ -71,7 +92,7 @@ def main_app():
     """Renders the main application interface."""
     
     if 'processed_data' not in st.session_state:
-        st.error("Data not found. Please upload again.")
+        st.error("Datos no encontrados. Por favor, súbelos de nuevo.")
         st.session_state.data_loaded = False
         st.rerun()
         return
@@ -80,9 +101,9 @@ def main_app():
     
     # --- Sidebar ---
     st.sidebar.title("🚀 Team Skills Hub")
-    st.sidebar.info("A strategic platform for talent intelligence and team development.")
+    st.sidebar.info("Plataforma estratégica para inteligencia de talento y desarrollo de equipos.")
     
-    if st.sidebar.button("Upload New Data"):
+    if st.sidebar.button("Subir Nuevos Datos"):
         st.session_state.data_loaded = False
         if 'processed_data' in st.session_state:
             del st.session_state.processed_data
@@ -95,7 +116,7 @@ def main_app():
     score_parsing_errors: int = data['parsing_errors']
 
     if df_merged.empty:
-        st.warning("No participants with valid scores were found in the uploaded file.")
+        st.warning("No se encontraron participantes con puntuaciones válidas en el archivo subido.")
         st.stop()
 
     # --- Analytics Engine ---
@@ -111,19 +132,18 @@ def main_app():
     # --- UI Rendering ---
     st.title("🚀 Team Skills Hub v3.1")
 
-    # --- EDIT: RE-ADDED 'Affinity Status' TAB ---
     tabs = st.tabs([
-        "📈 Strategic Overview",
-        "⭐ Affinity Status",
-        "👤 Team Profiles",
-        "🧠 Skill Analysis",
-        "🔭 Action Workbench",
+        "📈 Resumen Estratégico",
+        "⭐ Estatus de Affinity",
+        "👤 Perfiles de Equipo",
+        "🧠 Análisis de Skills",
+        "🔭 Panel de Acción",
     ])
 
     with tabs[0]:
         render_strategic_overview(df_merged, user_df, analytics, total_participants_in_file, score_parsing_errors)
     with tabs[1]:
-        render_affinity_status(user_df, analytics) # <-- RE-ADDED
+        render_affinity_status(user_df, analytics)
     with tabs[2]:
         render_team_profiles(df_merged, user_df, analytics)
     with tabs[3]:
