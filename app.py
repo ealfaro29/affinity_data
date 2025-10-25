@@ -32,34 +32,53 @@ def upload_landing_page():
     but before data is loaded.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
-    st.subheader("Please upload your data to begin")
+    st.markdown("Please upload your team's skill data to begin the analysis.")
 
     # We assume tasks.json is a local file that defines the skills.
     # The user only needs to upload their own team's CSV data.
     tasks_json_path = "tasks.json" 
 
-    uploaded_csv = st.file_uploader("Upload your User Data CSV file", type="csv")
-
-    if uploaded_csv is not None:
-        st.info(f"File '{uploaded_csv.name}' uploaded. Click below to analyze.")
+    with st.container(border=True):
+        st.subheader("1. Upload Your Data")
+        st.info("ℹ️ Your `tasks.json` file is loaded automatically. Please upload your `userData.csv` file to proceed.")
         
-        if st.button("Load and Analyze Data", type="primary", use_container_width=True):
-            with st.spinner("Processing your data... This may take a moment."):
+        uploaded_csv = st.file_uploader(
+            "Upload your User Data CSV file", 
+            type="csv",
+            label_visibility="collapsed"
+        )
+
+    # --- AUTO-SUBMIT LOGIC ---
+    # As soon as a file is uploaded, process it.
+    if uploaded_csv is not None:
+        
+        # Prevent re-processing if the same file is already in memory
+        if 'processed_data' not in st.session_state: 
+            with st.spinner(f"Processing '{uploaded_csv.name}'... This may take a moment."):
+                
                 # Pass the uploaded file object directly to the data engine
                 data = load_and_process_data(uploaded_csv, tasks_json_path)
             
-            if data is not None:
+            if data is not None and not data['merged_df'].empty:
                 # Store the processed data in session state
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
                 st.success("Data loaded successfully! 🎉")
                 st.rerun() # Rerun to trigger main_app()
+            elif data is not None and data['merged_df'].empty:
+                st.error("Processing complete, but no valid skill data was found in the file. Please check your file and upload again.")
+                st.session_state.data_loaded = False
             else:
                 # If data processing failed
-                st.error("There was an error processing your file. Please check the file format.")
+                st.error("There was an error processing your file. Please check the file format and column names.")
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
                     del st.session_state.processed_data
+        
+        # If data is already loaded, just wait for rerun
+        elif st.session_state.data_loaded:
+            st.rerun()
+
 
 def main_app():
     """Renders the main application interface."""
