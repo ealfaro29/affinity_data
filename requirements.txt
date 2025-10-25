@@ -1,6 +1,4 @@
 streamlit
 pandas
 plotly
-wordcloud
-matplotlib
 openpyxl

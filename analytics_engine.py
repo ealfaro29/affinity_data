@@ -5,84 +5,119 @@
 import pandas as pd
 from datetime import datetime
 import re
-
+from typing import Dict, Any, pd_Series
+import config  # Import the centralized configuration
 
 def _build_person_archetypes(df: pd.DataFrame, user_df: pd.DataFrame) -> pd.DataFrame:
+    """Calculates Avg Score, Volatility, and defines a persona archetype for each person."""
     summary = df.groupby('Name')['Score'].agg(['mean', 'std']).rename(columns={'mean': 'Avg Score', 'std': 'Volatility'})
     median_v = summary['Volatility'].median()
     median_p = summary['Avg Score'].median()
 
-    def archetype(row):
+    def archetype(row: pd.Series) -> str:
+        """Assigns an archetype based on performance and volatility."""
         if pd.isna(row['Volatility']) or row['Avg Score'] == 0:
-            return "🎯 Needs Support"
+            return config.ARCHETYPE_NEEDS_SUPPORT
         if row['Avg Score'] >= median_p and row['Volatility'] <= median_v:
-            return "🏆 Versatile Leader"
+            return config.ARCHETYPE_VERSATILE_LEADER
         if row['Avg Score'] >= median_p and row['Volatility'] > median_v:
-            return "🌟 Niche Specialist"
+            return config.ARCHETYPE_NICHE_SPECIALIST
         if row['Avg Score'] < median_p and row['Volatility'] <= median_v:
-            return "🌱 Consistent Learner"
-        return "🎯 Needs Support"
+            return config.ARCHETYPE_CONSISTENT_LEARNER
+        return config.ARCHETYPE_NEEDS_SUPPORT
 
     summary['Archetype'] = summary.apply(archetype, axis=1)
-    summary = summary.join(user_df.set_index('Name')[['Team Leader', 'Scheduler tag']], how='left')
+    
+    # Join with user_df to get metadata like Team Leader
+    if 'Team Leader' in user_df.columns and 'Scheduler tag' in user_df.columns:
+        summary = summary.join(user_df.set_index('Name')[['Team Leader', 'Scheduler tag']], how='left')
+    
     return summary
 
 
-def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> dict:
+def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Computes all advanced analytics for the dashboard.
+    
+    Args:
+        df: The main merged and cleaned dataframe (long format).
+        user_df: The user metadata dataframe.
+        
+    Returns:
+        A dictionary holding all computed analytics dataframes.
+    """
     analytics = {}
     if df.empty:
         return analytics
 
-    # Pass the raw dataframe through for UI lookups (NEW)
+    # Pass the raw dataframe through for UI lookups
     analytics['df_merged_for_lookup'] = df 
 
-    # Personas / Archetypes
+    # 1. Personas / Archetypes
     person_summary = _build_person_archetypes(df, user_df)
     analytics['person_summary'] = person_summary
 
-    # Task Summary with FULL Risk Analysis (Original + Enhancements)
+    # 2. Task Summary with FULL Risk Analysis
     task_summary = df.groupby('Task_Prefixed').agg(
         Avg_Score=('Score', 'mean'),
-        Expert_Count=('Score', lambda s: (s >= 0.8).sum()),
-        Beginner_Count=('Score', lambda s: (s < 0.4).sum()),
+        Expert_Count=('Score', lambda s: (s >= config.EXPERT_THRESHOLD).sum()),
+        Beginner_Count=('Score', lambda s: (s < config.BEGINNER_THRESHOLD).sum()),
     )
     task_summary['Risk Index'] = (task_summary['Beginner_Count'] + 1) / (task_summary['Expert_Count'] + 1)
     task_summary['SPOF'] = task_summary['Expert_Count'] == 1
     task_summary['Competency_Score'] = task_summary['Avg_Score'] * (task_summary['Expert_Count'] + 1)
 
-    # License expiration risk overlay (from original)
-    experts_df = df[df['Score'] >= 0.8][['Name', 'Task_Prefixed']]
+    # 3. License expiration risk overlay
+    experts_df = df[df['Score'] >= config.EXPERT_THRESHOLD][['Name', 'Task_Prefixed']]
     experts_with_exp = pd.merge(experts_df, user_df[['Name', 'License Expiration']], on='Name', how='left')
-    ninety_days_from_now = datetime.now() + pd.Timedelta(days=90)
-    expiring_experts = experts_with_exp[(experts_with_exp['License Expiration'].notna()) & (experts_with_exp['License Expiration'] < ninety_days_from_now)]
+    
+    expiration_window = datetime.now() + pd.Timedelta(days=config.LICENSE_EXPIRATION_WINDOW_DAYS)
+    
+    expiring_experts = experts_with_exp[
+        (experts_with_exp['License Expiration'].notna()) & 
+        (experts_with_exp['License Expiration'] < expiration_window)
+    ]
     tasks_with_exp_risk = set(expiring_experts['Task_Prefixed'].unique())
     task_summary['Expiration Risk'] = task_summary.index.isin(tasks_with_exp_risk)
     
     analytics['task_summary'] = task_summary
     analytics['risk_radar'] = task_summary.sort_values(by='Risk Index', ascending=False)
-    analytics['risk_matrix'] = task_summary
+    analytics['risk_matrix'] = task_summary[task_summary['Risk Index'] > config.HIGH_RISK_INDEX]
 
-    # Opportunity Lens: Identify over-strengths
-    analytics['opportunity_lens'] = task_summary[task_summary['Avg_Score'] >= 0.75].sort_values('Competency_Score', ascending=False)
+    # 4. Opportunity Lens: Identify over-strengths
+    analytics['opportunity_lens'] = task_summary[
+        task_summary['Avg_Score'] >= config.OPPORTUNITY_AVG_SCORE
+    ].sort_values('Competency_Score', ascending=False)
 
-    # Talent pipeline: medium performers in critical tasks
-    critical_tasks = task_summary[task_summary['Avg_Score'] < 0.6].index
-    pipeline_candidates = df[df['Task_Prefixed'].isin(critical_tasks) & df['Score'].between(0.6, 0.79)]
+    # 5. Talent pipeline: medium performers in critical tasks
+    critical_tasks = task_summary[task_summary['Avg_Score'] < config.CRITICAL_AVG_SCORE].index
+    pipeline_candidates = df[
+        df['Task_Prefixed'].isin(critical_tasks) & 
+        df['Score'].between(config.PIPELINE_MIN, config.PIPELINE_MAX)
+    ]
     pipeline_candidates = pd.merge(pipeline_candidates, person_summary.reset_index()[['Name', 'Archetype']], on='Name')
     analytics['talent_pipeline'] = pipeline_candidates[['Name', 'Archetype', 'Task_Prefixed', 'Score']].sort_values('Score', ascending=False)
 
-    # Hidden stars and adjusted ranking
+    # 6. Hidden stars and adjusted ranking
     task_avg = df.groupby('Task_Prefixed')['Score'].mean()
-    hard_tasks = task_avg[task_avg < 0.6].index
-    mid_tier = person_summary[(person_summary['Avg Score'] >= 0.5) & (person_summary['Avg Score'] < 0.8)].index
-    analytics['hidden_stars'] = df[(df['Name'].isin(mid_tier)) & (df['Task_Prefixed'].isin(hard_tasks)) & (df['Score'] >= 0.9)].copy()
+    hard_tasks = task_avg[task_avg < config.CRITICAL_AVG_SCORE].index
+    mid_tier = person_summary[
+        (person_summary['Avg Score'] >= 0.5) & (person_summary['Avg Score'] < 0.8)
+    ].index
+    
+    analytics['hidden_stars'] = df[
+        (df['Name'].isin(mid_tier)) & 
+        (df['Task_Prefixed'].isin(hard_tasks)) & 
+        (df['Score'] >= config.HIDDEN_STAR_THRESHOLD)
+    ].copy()
 
+    # 7. Adjusted (difficulty-weighted) ranking
     df_adj = df.copy()
     df_adj['Difficulty Weight'] = df_adj['Task_Prefixed'].map(1 - task_avg)
     df_adj['Adjusted Score'] = df_adj['Score'] * df_adj['Difficulty Weight']
     analytics['adjusted_ranking'] = pd.DataFrame(df_adj.groupby('Name')['Adjusted Score'].sum().sort_values(ascending=False)).reset_index()
 
-    # Skill correlation
+    # 8. Skill correlation
     skill_pivot = df.pivot_table(index='Name', columns='Skill', values='Score', aggfunc='mean').fillna(df['Score'].mean())
     analytics['skill_correlation'] = skill_pivot.corr()
 
@@ -90,6 +125,7 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> dict:
 
 
 def analyze_comment_themes(df_comments: pd.Series) -> pd.DataFrame:
+    """Uses regex to find common themes in a Series of free-text comments."""
     themes = {
         'Training/Guidance': r'training|learn|course|session|refresher|guide|help|practice',
         'Isometric Skills': r'isometric|iso',
@@ -100,6 +136,8 @@ def analyze_comment_themes(df_comments: pd.Series) -> pd.DataFrame:
     }
     theme_counts = {theme: 0 for theme in themes}
     all_comments = ' '.join(df_comments.dropna().unique())
+    
     for theme, pattern in themes.items():
         theme_counts[theme] = len(re.findall(pattern, all_comments, re.IGNORECASE))
+        
     return pd.DataFrame.from_dict(theme_counts, orient='index', columns=['Mentions']).sort_values('Mentions', ascending=False)

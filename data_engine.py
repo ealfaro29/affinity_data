@@ -6,14 +6,18 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import streamlit as st
-
+from typing import Dict, Any, Optional, List
 
 @st.cache_data
-def load_and_process_data(user_csv_path: str, tasks_json_path: str):
-    """Load, clean, and merge the user skills CSV and the tasks catalog JSON.
-    Filenames are intentionally fixed. Robust to missing columns and mixed value types.
-    Returns a dict with merged_df, user_df, total_count, parsing_errors.
+def load_and_process_data(user_csv_path: str, tasks_json_path: str) -> Optional[Dict[str, Any]]:
     """
+    Load, clean, and merge the user skills CSV and the tasks catalog JSON.
+    Filenames are intentionally fixed. Robust to missing columns and mixed value types.
+    
+    Returns:
+        A dict with merged_df, user_df, total_count, parsing_errors, or None on failure.
+    """
+    
     # Read tasks.json → tasks_df
     try:
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
@@ -21,6 +25,16 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str):
     except Exception as e:
         st.error(f"Critical error reading tasks.json: {e}")
         return None
+        
+    # --- DYNAMIC TASK LOADING (ENHANCEMENT) ---
+    # Get the list of task IDs from tasks.json to dynamically build the column list
+    # This avoids the hardcoded 'range(1, 32)'
+    if 'task_id' not in tasks_df.columns:
+        st.error("Critical error: 'task_id' (from 'id') not found in tasks.json.")
+        return None
+        
+    task_cols = [f'Task {i}' for i in tasks_df['task_id']]
+    num_tasks = len(task_cols)
 
     # Read userData.csv → user_df
     try:
@@ -57,16 +71,28 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str):
     for col in user_df.select_dtypes(include=['object']).columns:
         user_df[col] = user_df[col].fillna('').astype(str).str.strip()
 
-    # Unpivot Task 1..31 into long format
-    task_cols = [f'Task {i}' for i in range(1, 32)]
+    # Unpivot Task 1..N into long format
+    # Ensure all expected task columns exist, adding missing ones as empty if needed
+    # This prevents errors if the CSV is missing task columns
+    present_task_cols = []
+    for col in task_cols:
+        if col in user_df.columns:
+            present_task_cols.append(col)
+        
     id_vars = [c for c in user_df.columns if c not in task_cols]
-    df_long = pd.melt(user_df, id_vars=id_vars, value_vars=task_cols, var_name='task_id_str', value_name='Score')
+    
+    if not present_task_cols:
+        st.error("No 'Task X' columns found in userData.csv.")
+        return None
+        
+    df_long = pd.melt(user_df, id_vars=id_vars, value_vars=present_task_cols, var_name='task_id_str', value_name='Score')
 
     # Extract numeric task_id and parse percentage scores
     df_long['task_id'] = df_long['task_id_str'].str.extract(r'(\d+)').astype(int)
     raw_scores = df_long['Score'].dropna()
     numeric_scores = pd.to_numeric(raw_scores.astype(str).str.replace('%', '', regex=False).str.strip(), errors='coerce')
     parsing_errors = int(numeric_scores.isnull().sum())
+    
     df_long['Score'] = pd.to_numeric(df_long['Score'].astype(str).str.replace('%', '', regex=False).str.strip(), errors='coerce') / 100
     df_long.dropna(subset=['Score'], inplace=True)
 
@@ -89,5 +115,3 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str):
         'total_count': total_names_in_file,
         'parsing_errors': parsing_errors,
     }
-
-
