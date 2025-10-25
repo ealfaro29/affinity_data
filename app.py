@@ -52,7 +52,7 @@ def main_app():
     analytics['comment_themes'] = analyze_comment_themes(all_comments) if not all_comments.empty else pd.DataFrame(columns=['Mentions'])
     
     # --- UI Rendering ---
-    st.title("🚀 Team Skills & Affinity Hub v2.0 (Restored & Enhanced)")
+    st.title("🚀 Team Skills & Affinity Hub v2.32")
 
     tabs = st.tabs([
         "📈 Strategic Overview",
