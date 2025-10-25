@@ -28,7 +28,6 @@ def _build_person_archetypes(df: pd.DataFrame, user_df: pd.DataFrame) -> pd.Data
 
     summary['Archetype'] = summary.apply(archetype, axis=1)
     
-    # Join with user_df to get metadata like Team Leader
     if 'Team Leader' in user_df.columns and 'Scheduler tag' in user_df.columns:
         summary = summary.join(user_df.set_index('Name')[['Team Leader', 'Scheduler tag']], how='left')
     
@@ -38,19 +37,11 @@ def _build_person_archetypes(df: pd.DataFrame, user_df: pd.DataFrame) -> pd.Data
 def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]:
     """
     Computes all advanced analytics for the dashboard.
-    
-    Args:
-        df: The main merged and cleaned dataframe (long format).
-        user_df: The user metadata dataframe.
-        
-    Returns:
-        A dictionary holding all computed analytics dataframes.
     """
     analytics = {}
     if df.empty:
         return analytics
 
-    # Pass the raw dataframe through for UI lookups
     analytics['df_merged_for_lookup'] = df 
 
     # 1. Personas / Archetypes
@@ -67,7 +58,7 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     task_summary['SPOF'] = task_summary['Expert_Count'] == 1
     task_summary['Competency_Score'] = task_summary['Avg_Score'] * (task_summary['Expert_Count'] + 1)
 
-    # 3. License expiration risk overlay
+    # 3. License expiration risk overlay (This is used in the `task_summary` logic, so it stays)
     experts_df = df[df['Score'] >= config.EXPERT_THRESHOLD][['Name', 'Task_Prefixed']]
     experts_with_exp = pd.merge(experts_df, user_df[['Name', 'License Expiration']], on='Name', how='left')
     
@@ -98,11 +89,7 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     pipeline_candidates = pd.merge(pipeline_candidates, person_summary.reset_index()[['Name', 'Archetype']], on='Name')
     analytics['talent_pipeline'] = pipeline_candidates[['Name', 'Archetype', 'Task_Prefixed', 'Score']].sort_values('Score', ascending=False)
 
-    # --- EDIT: Removed 'hidden_stars' and 'adjusted_ranking' calculations ---
-
-    # 6. Skill correlation (Still needed for 'Training Combos' feature)
-    skill_pivot = df.pivot_table(index='Name', columns='Skill', values='Score', aggfunc='mean').fillna(df['Score'].mean())
-    analytics['skill_correlation'] = skill_pivot.corr()
+    # --- EDIT: Removed 'skill_correlation' calculation ---
 
     return analytics
 
