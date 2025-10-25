@@ -5,8 +5,7 @@
 import streamlit as st
 import pandas as pd
 from config import DEVELOPMENT_MODE
-# --- Ensure this import matches the function name below ---
-from data_engine import load_and_process_data, generate_csv_template
+from data_engine import load_and_process_data, generate_csv_template # Ensure this import is correct
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
     render_strategic_overview,
@@ -31,33 +30,40 @@ def upload_landing_page():
     but before data is loaded.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
-    st.markdown("Sigue los pasos para analizar los skills de tu equipo.")
+    # --- TRANSLATION ---
+    st.markdown("Follow the steps to analyze your team's skills.")
 
     tasks_json_path = "tasks.json" 
 
     with st.container(border=True):
-        st.subheader("Paso 1: Descarga la Plantilla (Opcional)")
-        st.markdown("Si no tienes un archivo, descarga la plantilla para llenarla con tus datos. El archivo ya tiene las columnas y el formato correcto.")
+        # --- TRANSLATION ---
+        st.subheader("Step 1: Download Template (Optional)")
+        # --- TRANSLATION ---
+        st.markdown("If you don't have a file ready, download the template to fill in your data. It includes the required columns and format.")
         
         try:
-            # --- Ensure this function call matches the name below ---
             template_csv = generate_csv_template(tasks_json_path)
             st.download_button(
-                label="📥 Descargar Plantilla CSV",
+                # --- TRANSLATION ---
+                label="📥 Download CSV Template",
                 data=template_csv,
                 file_name="skills_template.csv",
                 mime="text/csv",
                 use_container_width=True
             )
         except Exception as e:
-            st.error(f"No se pudo generar la plantilla: {e}")
-            st.info("Asegúrate de que el archivo `tasks.json` esté presente en el directorio de la app.")
+             # --- TRANSLATION ---
+            st.error(f"Could not generate template: {e}")
+            # --- TRANSLATION ---
+            st.info("Ensure the `tasks.json` file is present in the app's directory.")
 
     with st.container(border=True):
-        st.subheader("Paso 2: Sube tu Archivo de Datos")
+         # --- TRANSLATION ---
+        st.subheader("Step 2: Upload Your Data File")
         
         uploaded_csv = st.file_uploader(
-            "Sube tu archivo `userData.csv` (o el que llenaste con la plantilla)", 
+            # --- TRANSLATION ---
+            "Upload your `userData.csv` file (or the one filled using the template)", 
             type="csv",
             label_visibility="collapsed"
         )
@@ -65,19 +71,23 @@ def upload_landing_page():
     # --- AUTO-SUBMIT LOGIC ---
     if uploaded_csv is not None:
         if 'processed_data' not in st.session_state: 
-            with st.spinner(f"Procesando '{uploaded_csv.name}'... Esto puede tardar un momento."):
+            # --- TRANSLATION ---
+            with st.spinner(f"Processing '{uploaded_csv.name}'... This might take a moment."):
                 data = load_and_process_data(uploaded_csv, tasks_json_path)
             
             if data is not None and not data['merged_df'].empty:
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
-                st.success("¡Datos cargados con éxito! 🎉")
+                # --- TRANSLATION ---
+                st.success("Data loaded successfully! 🎉")
                 st.rerun()
             elif data is not None and data['merged_df'].empty:
-                st.error("Proceso completado, pero no se encontraron datos de skills válidos en el archivo. Revisa tu archivo y súbelo de nuevo.")
+                # --- TRANSLATION ---
+                st.error("Processing complete, but no valid skill data was found in the file. Please check your file and upload again.")
                 st.session_state.data_loaded = False
             else:
-                st.error("Hubo un error procesando tu archivo. Revisa el formato y los nombres de las columnas.")
+                # --- TRANSLATION ---
+                st.error("There was an error processing your file. Please check the format and column names.")
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
                     del st.session_state.processed_data
@@ -90,7 +100,8 @@ def main_app():
     """Renders the main application interface."""
     
     if 'processed_data' not in st.session_state:
-        st.error("Datos no encontrados. Por favor, súbelos de nuevo.")
+        # --- TRANSLATION ---
+        st.error("Data not found. Please upload again.")
         st.session_state.data_loaded = False
         st.rerun()
         return
@@ -99,9 +110,10 @@ def main_app():
     
     # --- Sidebar ---
     st.sidebar.title("🚀 Team Skills Hub")
-    st.sidebar.info("Plataforma estratégica para inteligencia de talento y desarrollo de equipos.")
+    st.sidebar.info("A strategic platform for talent intelligence and team development.") # Already English
     
-    if st.sidebar.button("Subir Nuevos Datos"):
+    # --- TRANSLATION ---
+    if st.sidebar.button("Upload New Data"):
         st.session_state.data_loaded = False
         if 'processed_data' in st.session_state:
             del st.session_state.processed_data
@@ -114,7 +126,8 @@ def main_app():
     score_parsing_errors: int = data['parsing_errors']
 
     if df_merged.empty:
-        st.warning("No se encontraron participantes con puntuaciones válidas en el archivo subido.")
+        # --- TRANSLATION ---
+        st.warning("No participants with valid scores were found in the uploaded file.")
         st.stop()
 
     # --- Analytics Engine ---
@@ -130,12 +143,13 @@ def main_app():
     # --- UI Rendering ---
     st.title("🚀 Team Skills Hub v3.1")
 
+    # --- TRANSLATION (Tab Names) ---
     tabs = st.tabs([
-        "📈 Resumen Estratégico",
-        "⭐ Estatus de Affinity",
-        "👤 Perfiles de Equipo",
-        "🧠 Análisis de Skills",
-        "🔭 Panel de Acción",
+        "📈 Strategic Overview",
+        "⭐ Affinity Status",
+        "👤 Team Profiles",
+        "🧠 Skill Analysis",
+        "🔭 Action Workbench",
     ])
 
     with tabs[0]:

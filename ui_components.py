@@ -11,7 +11,7 @@ from typing import Dict, Any
 import config  # Import the centralized configuration
 
 # ==============================================================================
-# STREAMLINED UI COMPONENTS
+# STREAMLINED UI COMPONENTS (Mostly English already)
 # ==============================================================================
 
 def render_strategic_overview(
@@ -186,7 +186,6 @@ def render_team_profiles(
                 c3.metric("Archetype", person_stats['Archetype'])
                 st.divider()
 
-                # Radar chart
                 team_avg = df_merged.groupby('Category')['Score'].mean()
                 person_avg = person_data.groupby('Category')['Score'].mean().reindex(team_avg.index, fill_value=0)
                 
@@ -265,19 +264,18 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 # STREAMLINED ACTION TAB
 # ==============================================================================
 def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
-    """Renders the risk, opportunity, and group builder workbench."""
+    """Renders the risk mitigation and group builder workbench."""
     st.header("🔭 Action Workbench")
     st.info("Use these tools to mitigate risks and build training groups.")
 
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
     talent_pipeline: pd.DataFrame = analytics.get('talent_pipeline', pd.DataFrame())
-    df_merged: pd.DataFrame = analytics.get('df_merged_for_lookup')
+    df_merged_lookup: pd.DataFrame = analytics.get('df_merged_for_lookup') # Use a distinct name
 
-    if df_merged is None:
+    if df_merged_lookup is None:
         st.error("Required data not available for this module.")
         return
 
-    # --- EDIT: Removed "Strength Deployment" tab ---
     sub_tabs = st.tabs(["🚨 Risk Mitigation", "👥 Group Builder"])
 
     with sub_tabs[0]:
@@ -318,22 +316,22 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                 with c2:
                     st.markdown("##### 🤝 **Assign Mentors**")
                     st.caption("Experts (≥80%) available to mentor this skill.")
-                    all_experts = df_merged[
-                        (df_merged['Task_Prefixed'] == selected_risk) & 
-                        (df_merged['Score'] >= config.EXPERT_THRESHOLD)
+                    # Use the lookup dataframe here
+                    all_experts = df_merged_lookup[ 
+                        (df_merged_lookup['Task_Prefixed'] == selected_risk) & 
+                        (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
                     ]
                     if not all_experts.empty:
                         st.dataframe(all_experts[['Name', 'Score']].sort_values('Score', ascending=False), hide_index=True, use_container_width=True)
                     else:
                         st.error("No experts available to mentor this skill.")
 
-    # --- EDIT: Removed "Strength Deployment" tab ---
-
     with sub_tabs[1]:
         st.subheader("👥 Custom Training Group Builder")
         st.markdown("**Goal:** Manually create training groups for any skill.")
         with st.form("group_builder_form"):
-            all_tasks = sorted(df_merged['Task_Prefixed'].unique())
+            # Use the lookup dataframe here
+            all_tasks = sorted(df_merged_lookup['Task_Prefixed'].unique()) 
             selected_task = st.selectbox(
                 "Select a skill for the training session:",
                 all_tasks, index=0 if all_tasks else None
@@ -348,7 +346,8 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                     st.error("Please select a skill.")
                 else:
                     st.subheader(f"✅ Generated Groups for: {selected_task}")
-                    filtered_df = df_merged[df_merged['Task_Prefixed'] == selected_task]
+                    # Use the lookup dataframe here
+                    filtered_df = df_merged_lookup[df_merged_lookup['Task_Prefixed'] == selected_task] 
                     
                     if filtered_df.empty:
                         st.error("No participants found for the selected criteria.")

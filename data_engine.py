@@ -8,7 +8,6 @@ from pathlib import Path
 import streamlit as st
 from typing import Dict, Any, Optional, IO
 
-# Make sure there are no syntax errors before this function definition
 @st.cache_data
 def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optional[Dict[str, Any]]:
     """
@@ -20,14 +19,17 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
         tasks_df.rename(columns={'title': 'Task', 'id': 'task_id', 'category': 'Category'}, inplace=True)
     except FileNotFoundError:
-        st.error(f"Error Crítico: No se encontró tasks.json en la ruta: {tasks_json_path}")
+        # --- TRANSLATION ---
+        st.error(f"Critical Error: tasks.json not found at path: {tasks_json_path}")
         return None
     except Exception as e:
-        st.error(f"Error Crítico al leer tasks.json: {e}")
+        # --- TRANSLATION ---
+        st.error(f"Critical Error reading tasks.json: {e}")
         return None
         
     if 'task_id' not in tasks_df.columns:
-        st.error("Error Crítico: 'task_id' (de 'id') no se encontró en tasks.json.")
+        # --- TRANSLATION ---
+        st.error("Critical Error: 'task_id' (from 'id') not found in tasks.json.")
         return None
         
     task_cols = [f'Task {i}' for i in tasks_df['task_id']]
@@ -38,7 +40,8 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         user_df = pd.read_csv(user_csv_file, sep=';', encoding='utf-8-sig')
         
     except Exception as e:
-        st.error(f"Error Crítico al leer el userData.csv subido: {e}")
+        # --- TRANSLATION ---
+        st.error(f"Critical Error reading uploaded userData.csv: {e}")
         return None
 
     # Normalize headers and key columns
@@ -73,7 +76,8 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
     id_vars = [c for c in user_df.columns if c not in task_cols]
     
     if not present_task_cols:
-        st.error("No se encontraron columnas 'Task X' en el userData.csv subido.")
+         # --- TRANSLATION ---
+        st.error("No 'Task X' columns found in the uploaded userData.csv.")
         return None
         
     df_long = pd.melt(user_df, id_vars=id_vars, value_vars=present_task_cols, var_name='task_id_str', value_name='Score')
@@ -103,18 +107,18 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         'parsing_errors': parsing_errors,
     }
 
-# --- Ensure this function definition has no errors ---
 @st.cache_data
 def generate_csv_template(tasks_json_path: str) -> str:
     """
-    Genera un string CSV de plantilla basado en las columnas requeridas y las tareas de tasks.json.
+    Generates a template CSV string based on required columns and tasks from tasks.json.
     """
     try:
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
         tasks_df.rename(columns={'id': 'task_id'}, inplace=True)
         task_cols = [f'Task {i}' for i in tasks_df['task_id']]
     except Exception as e:
-        st.warning(f"No se pudo leer tasks.json para generar la plantilla ({e}). Usando 31 tareas por defecto.")
+        # --- TRANSLATION ---
+        st.warning(f"Could not read tasks.json to generate template ({e}). Using 31 default tasks.")
         task_cols = [f'Task {i}' for i in range(1, 32)]
 
     base_headers = [
@@ -131,17 +135,18 @@ def generate_csv_template(tasks_json_path: str) -> str:
     
     template_df = pd.DataFrame(columns=all_headers)
     
+    # --- TRANSLATION (Example Row) ---
     example_row = {
-        'BPS': 'Nombre Apellido',
-        'Team Leader': 'Nombre del Líder',
+        'BPS': 'FirstName LastName',
+        'Team Leader': 'Leader Name',
         'Active License': 'Yes',
-        'License Expiration ': '25.10.2026',
+        'License Expiration ': '25.10.2026', # Date format depends on user locale, keep simple
         'Has received Affinity training of McK?': 'No',
         'Scheduler tag': 'No',
-        'Specific Needs': 'Necesita ayuda con isométricos',
+        'Specific Needs': 'Needs help with isometrics',
     }
     for col in task_cols:
-        example_row[col] = '50%'
+        example_row[col] = '50%' # Example score
 
     template_df = pd.concat([template_df, pd.DataFrame([example_row])], ignore_index=True)
     
