@@ -5,7 +5,8 @@
 import streamlit as st
 import pandas as pd
 from config import DEVELOPMENT_MODE
-from data_engine import load_and_process_data, generate_csv_template # Ensure this import is correct
+# --- EDIT: Import the new function ---
+from data_engine import load_and_process_data, generate_csv_template, generate_task_guide
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
     render_strategic_overview,
@@ -30,39 +31,53 @@ def upload_landing_page():
     but before data is loaded.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
-    # --- TRANSLATION ---
     st.markdown("Follow the steps to analyze your team's skills.")
 
-    tasks_json_path = "tasks.json" 
+    tasks_json_path = "tasks.json"
 
+    # --- Container for Downloads ---
     with st.container(border=True):
-        # --- TRANSLATION ---
-        st.subheader("Step 1: Download Template (Optional)")
-        # --- TRANSLATION ---
-        st.markdown("If you don't have a file ready, download the template to fill in your data. It includes the required columns and format.")
+        st.subheader("Step 1: Get Resources (Optional)")
+        col1, col2 = st.columns(2)
         
-        try:
-            template_csv = generate_csv_template(tasks_json_path)
-            st.download_button(
-                # --- TRANSLATION ---
-                label="📥 Download CSV Template",
-                data=template_csv,
-                file_name="skills_template.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-        except Exception as e:
-             # --- TRANSLATION ---
-            st.error(f"Could not generate template: {e}")
-            # --- TRANSLATION ---
-            st.info("Ensure the `tasks.json` file is present in the app's directory.")
+        with col1:
+            st.markdown("**Download Template**")
+            st.caption("If you don't have a file ready, download the template to fill in your data. It includes the required columns and format.")
+            try:
+                template_csv = generate_csv_template(tasks_json_path)
+                st.download_button(
+                    label="📥 Download CSV Template",
+                    data=template_csv,
+                    file_name="skills_template.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"Could not generate template: {e}")
+                st.info("Ensure the `tasks.json` file is present.")
+        
+        # --- EDIT: Add Task Guide Download ---
+        with col2:
+            st.markdown("**Download Task Guide**")
+            st.caption("Download a list of all tasks (skills) included in the assessment.")
+            try:
+                task_guide_content = generate_task_guide(tasks_json_path)
+                st.download_button(
+                    label="📄 Download Task Guide (.txt)",
+                    data=task_guide_content,
+                    file_name="task_guide.txt",
+                    mime="text/plain", # Use text/plain for simple list
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"Could not generate task guide: {e}")
+                st.info("Ensure the `tasks.json` file is present.")
+
 
     with st.container(border=True):
-         # --- TRANSLATION ---
         st.subheader("Step 2: Upload Your Data File")
         
         uploaded_csv = st.file_uploader(
-            # --- TRANSLATION ---
             "Upload your `userData.csv` file (or the one filled using the template)", 
             type="csv",
             label_visibility="collapsed"
@@ -71,22 +86,18 @@ def upload_landing_page():
     # --- AUTO-SUBMIT LOGIC ---
     if uploaded_csv is not None:
         if 'processed_data' not in st.session_state: 
-            # --- TRANSLATION ---
             with st.spinner(f"Processing '{uploaded_csv.name}'... This might take a moment."):
                 data = load_and_process_data(uploaded_csv, tasks_json_path)
             
             if data is not None and not data['merged_df'].empty:
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
-                # --- TRANSLATION ---
                 st.success("Data loaded successfully! 🎉")
                 st.rerun()
             elif data is not None and data['merged_df'].empty:
-                # --- TRANSLATION ---
                 st.error("Processing complete, but no valid skill data was found in the file. Please check your file and upload again.")
                 st.session_state.data_loaded = False
             else:
-                # --- TRANSLATION ---
                 st.error("There was an error processing your file. Please check the format and column names.")
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
@@ -100,7 +111,6 @@ def main_app():
     """Renders the main application interface."""
     
     if 'processed_data' not in st.session_state:
-        # --- TRANSLATION ---
         st.error("Data not found. Please upload again.")
         st.session_state.data_loaded = False
         st.rerun()
@@ -110,9 +120,8 @@ def main_app():
     
     # --- Sidebar ---
     st.sidebar.title("🚀 Team Skills Hub")
-    st.sidebar.info("A strategic platform for talent intelligence and team development.") # Already English
+    st.sidebar.info("A strategic platform for talent intelligence and team development.")
     
-    # --- TRANSLATION ---
     if st.sidebar.button("Upload New Data"):
         st.session_state.data_loaded = False
         if 'processed_data' in st.session_state:
@@ -126,7 +135,6 @@ def main_app():
     score_parsing_errors: int = data['parsing_errors']
 
     if df_merged.empty:
-        # --- TRANSLATION ---
         st.warning("No participants with valid scores were found in the uploaded file.")
         st.stop()
 
@@ -143,7 +151,6 @@ def main_app():
     # --- UI Rendering ---
     st.title("🚀 Team Skills Hub v3.1")
 
-    # --- TRANSLATION (Tab Names) ---
     tabs = st.tabs([
         "📈 Strategic Overview",
         "⭐ Affinity Status",

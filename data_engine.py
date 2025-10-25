@@ -19,16 +19,13 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
         tasks_df.rename(columns={'title': 'Task', 'id': 'task_id', 'category': 'Category'}, inplace=True)
     except FileNotFoundError:
-        # --- TRANSLATION ---
         st.error(f"Critical Error: tasks.json not found at path: {tasks_json_path}")
         return None
     except Exception as e:
-        # --- TRANSLATION ---
         st.error(f"Critical Error reading tasks.json: {e}")
         return None
         
     if 'task_id' not in tasks_df.columns:
-        # --- TRANSLATION ---
         st.error("Critical Error: 'task_id' (from 'id') not found in tasks.json.")
         return None
         
@@ -40,7 +37,6 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
         user_df = pd.read_csv(user_csv_file, sep=';', encoding='utf-8-sig')
         
     except Exception as e:
-        # --- TRANSLATION ---
         st.error(f"Critical Error reading uploaded userData.csv: {e}")
         return None
 
@@ -76,7 +72,6 @@ def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optio
     id_vars = [c for c in user_df.columns if c not in task_cols]
     
     if not present_task_cols:
-         # --- TRANSLATION ---
         st.error("No 'Task X' columns found in the uploaded userData.csv.")
         return None
         
@@ -117,7 +112,6 @@ def generate_csv_template(tasks_json_path: str) -> str:
         tasks_df.rename(columns={'id': 'task_id'}, inplace=True)
         task_cols = [f'Task {i}' for i in tasks_df['task_id']]
     except Exception as e:
-        # --- TRANSLATION ---
         st.warning(f"Could not read tasks.json to generate template ({e}). Using 31 default tasks.")
         task_cols = [f'Task {i}' for i in range(1, 32)]
 
@@ -135,19 +129,47 @@ def generate_csv_template(tasks_json_path: str) -> str:
     
     template_df = pd.DataFrame(columns=all_headers)
     
-    # --- TRANSLATION (Example Row) ---
     example_row = {
         'BPS': 'FirstName LastName',
         'Team Leader': 'Leader Name',
         'Active License': 'Yes',
-        'License Expiration ': '25.10.2026', # Date format depends on user locale, keep simple
+        'License Expiration ': '25.10.2026',
         'Has received Affinity training of McK?': 'No',
         'Scheduler tag': 'No',
         'Specific Needs': 'Needs help with isometrics',
     }
     for col in task_cols:
-        example_row[col] = '50%' # Example score
+        example_row[col] = '50%'
 
     template_df = pd.concat([template_df, pd.DataFrame([example_row])], ignore_index=True)
     
     return template_df.to_csv(sep=';', index=False, encoding='utf-8-sig')
+
+# --- NEW FUNCTION ---
+@st.cache_data
+def generate_task_guide(tasks_json_path: str) -> str:
+    """
+    Generates a simple text list of tasks (ID and Title) from tasks.json.
+    """
+    try:
+        tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
+        # Ensure correct columns exist after reading JSON
+        tasks_df.rename(columns={'id': 'task_id', 'title': 'Task'}, inplace=True)
+        
+        if 'task_id' not in tasks_df.columns or 'Task' not in tasks_df.columns:
+            raise ValueError("Required columns 'id' or 'title' not found in tasks.json skills list.")
+        
+        # Sort by task_id to ensure order
+        tasks_df = tasks_df.sort_values(by='task_id')
+        
+        # Format the output string
+        guide_lines = ["Team Skills Assessment - Task List\n", "="*35 + "\n"]
+        for _, row in tasks_df.iterrows():
+            guide_lines.append(f"Task {row['task_id']}: {row['Task']}\n")
+            
+        return "".join(guide_lines)
+
+    except FileNotFoundError:
+        return f"Error: Could not find the task definition file at {tasks_json_path}."
+    except Exception as e:
+        return f"Error reading or processing tasks.json: {e}"
