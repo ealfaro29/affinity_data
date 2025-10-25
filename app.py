@@ -5,7 +5,6 @@
 import streamlit as st
 import pandas as pd
 from config import DEVELOPMENT_MODE
-# --- EDIT: Import the new function ---
 from data_engine import load_and_process_data, generate_csv_template, generate_task_guide
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
@@ -35,47 +34,53 @@ def upload_landing_page():
 
     tasks_json_path = "tasks.json"
 
-    # --- Container for Downloads ---
-    with st.container(border=True):
-        st.subheader("Step 1: Get Resources (Optional)")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Download Template**")
-            st.caption("If you don't have a file ready, download the template to fill in your data. It includes the required columns and format.")
+    # --- REVISED UI FOR DOWNLOADS (incorporating sketch ideas) ---
+    st.subheader("Step 1: Get Resources (Optional)")
+    st.markdown("Download templates and guides to help you prepare your data.")
+
+    col1, col2 = st.columns(2, gap="large") # Use columns to align download cards
+    
+    with col1:
+        with st.container(border=True): # Card for CSV Template
+            st.markdown("#### 📥 CSV Data Template")
+            st.markdown("Use this pre-formatted CSV file to manually enter your team's skill data. It includes all required columns and an example row.")
             try:
                 template_csv = generate_csv_template(tasks_json_path)
                 st.download_button(
-                    label="📥 Download CSV Template",
+                    label="Download Template",
                     data=template_csv,
                     file_name="skills_template.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    use_container_width=True,
+                    help="Includes all 'Task X' columns and required fields."
                 )
             except Exception as e:
-                st.error(f"Could not generate template: {e}")
+                st.error(f"Could not generate CSV template: {e}")
                 st.info("Ensure the `tasks.json` file is present.")
         
-        # --- EDIT: Add Task Guide Download ---
-        with col2:
-            st.markdown("**Download Task Guide**")
-            st.caption("Download a list of all tasks (skills) included in the assessment.")
+    with col2:
+        with st.container(border=True): # Card for Task Guide
+            st.markdown("#### 📄 Task Reference Guide")
+            st.markdown("Download a plain text file listing all the tasks (skills) and their IDs that are part of this assessment.")
             try:
                 task_guide_content = generate_task_guide(tasks_json_path)
                 st.download_button(
-                    label="📄 Download Task Guide (.txt)",
+                    label="Download Task Guide",
                     data=task_guide_content,
                     file_name="task_guide.txt",
-                    mime="text/plain", # Use text/plain for simple list
-                    use_container_width=True
+                    mime="text/plain",
+                    use_container_width=True,
+                    help="Provides a list of all skills/tasks for reference."
                 )
             except Exception as e:
                 st.error(f"Could not generate task guide: {e}")
                 st.info("Ensure the `tasks.json` file is present.")
 
+    st.markdown("---") # Separator between downloads and upload
 
     with st.container(border=True):
         st.subheader("Step 2: Upload Your Data File")
+        st.markdown("Upload your completed `userData.csv` file here to begin the analysis.")
         
         uploaded_csv = st.file_uploader(
             "Upload your `userData.csv` file (or the one filled using the template)", 
@@ -83,7 +88,7 @@ def upload_landing_page():
             label_visibility="collapsed"
         )
 
-    # --- AUTO-SUBMIT LOGIC ---
+    # --- AUTO-SUBMIT LOGIC (remains unchanged) ---
     if uploaded_csv is not None:
         if 'processed_data' not in st.session_state: 
             with st.spinner(f"Processing '{uploaded_csv.name}'... This might take a moment."):
@@ -166,7 +171,7 @@ def main_app():
     with tabs[2]:
         render_team_profiles(df_merged, user_df, analytics)
     with tabs[3]:
-        render_skill_analysis(df_merged, analytics)
+        render_skill_analysis(df_merged, user_df, analytics) # Added user_df here
     with tabs[4]:
         render_action_workbench(df_merged, analytics)
 
