@@ -9,19 +9,17 @@ from data_engine import load_and_process_data
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
     render_strategic_overview,
-    render_affinity_status,
-    render_action_playbook,
+    render_affinity_status,  # <-- RE-ADDED
     render_team_profiles,
     render_skill_analysis,
-    render_team_dna,
-    render_risk_opportunity,
+    render_action_workbench,
     login_page
 )
 from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v2.32",
+    page_title="Team Skills Hub v3.1", # Version bump
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -34,8 +32,6 @@ def upload_landing_page():
     st.title("🚀 Welcome to the Team Skills Hub")
     st.markdown("Please upload your team's skill data to begin the analysis.")
 
-    # We assume tasks.json is a local file that defines the skills.
-    # The user only needs to upload their own team's CSV data.
     tasks_json_path = "tasks.json" 
 
     with st.container(border=True):
@@ -48,33 +44,25 @@ def upload_landing_page():
         )
 
     # --- AUTO-SUBMIT LOGIC ---
-    # As soon as a file is uploaded, process it.
     if uploaded_csv is not None:
-        
-        # Prevent re-processing if the same file is already in memory
         if 'processed_data' not in st.session_state: 
             with st.spinner(f"Processing '{uploaded_csv.name}'... This may take a moment."):
-                
-                # Pass the uploaded file object directly to the data engine
                 data = load_and_process_data(uploaded_csv, tasks_json_path)
             
             if data is not None and not data['merged_df'].empty:
-                # Store the processed data in session state
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
                 st.success("Data loaded successfully! 🎉")
-                st.rerun() # Rerun to trigger main_app()
+                st.rerun()
             elif data is not None and data['merged_df'].empty:
                 st.error("Processing complete, but no valid skill data was found in the file. Please check your file and upload again.")
                 st.session_state.data_loaded = False
             else:
-                # If data processing failed
                 st.error("There was an error processing your file. Please check the file format and column names.")
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
                     del st.session_state.processed_data
         
-        # If data is already loaded, just wait for rerun
         elif st.session_state.data_loaded:
             st.rerun()
 
@@ -82,7 +70,6 @@ def upload_landing_page():
 def main_app():
     """Renders the main application interface."""
     
-    # --- Load data from session state ---
     if 'processed_data' not in st.session_state:
         st.error("Data not found. Please upload again.")
         st.session_state.data_loaded = False
@@ -96,7 +83,6 @@ def main_app():
     st.sidebar.info("A strategic platform for talent intelligence and team development.")
     
     if st.sidebar.button("Upload New Data"):
-        # Clear session state to return to upload screen
         st.session_state.data_loaded = False
         if 'processed_data' in st.session_state:
             del st.session_state.processed_data
@@ -115,7 +101,6 @@ def main_app():
     # --- Analytics Engine ---
     analytics: Dict[str, Any] = compute_analytics(df_merged, user_df)
     
-    # Analyze comment themes
     all_comments = user_df['Comments'].dropna().str.strip()
     all_comments = all_comments[all_comments != '']
     if not all_comments.empty:
@@ -124,52 +109,40 @@ def main_app():
         analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
     
     # --- UI Rendering ---
-    st.title("🚀 Team Skills & Affinity Hub v2.32")
+    st.title("🚀 Team Skills Hub v3.1")
 
-    # --- EDIT: Streamlined Tab List ---
+    # --- EDIT: RE-ADDED 'Affinity Status' TAB ---
     tabs = st.tabs([
         "📈 Strategic Overview",
         "⭐ Affinity Status",
-        "🗺️ Action Playbook",
         "👤 Team Profiles",
-        "🧬 Team DNA & Dynamics",
         "🧠 Skill Analysis",
-        "🔭 Risk & Opportunity Forecaster",
+        "🔭 Action Workbench",
     ])
 
     with tabs[0]:
         render_strategic_overview(df_merged, user_df, analytics, total_participants_in_file, score_parsing_errors)
     with tabs[1]:
-        render_affinity_status(user_df, analytics)
+        render_affinity_status(user_df, analytics) # <-- RE-ADDED
     with tabs[2]:
-        render_action_playbook(df_merged, analytics)
-    with tabs[3]:
         render_team_profiles(df_merged, user_df, analytics)
-    with tabs[4]:
-        render_team_dna(df_merged, analytics)
-    with tabs[5]:
+    with tabs[3]:
         render_skill_analysis(df_merged, analytics)
-    with tabs[6]:
-        render_risk_opportunity(analytics)
+    with tabs[4]:
+        render_action_workbench(df_merged, analytics)
 
 
 # --- Main execution (State Machine) ---
 if __name__ == "__main__":
     
-    # Initialize session state keys
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
         
     if DEVELOPMENT_MODE:
-        st.session_state.logged_in = True # Bypass login in dev mode
+        st.session_state.logged_in = True 
 
-    # Control flow:
-    # 1. Check Login
-    # 2. Check Data
-    # 3. Run App
-    
     if not st.session_state.logged_in:
         login_page()
     elif not st.session_state.data_loaded:
