@@ -19,7 +19,7 @@ from ui_components import (
 )
 
 st.set_page_config(
-    page_title="Team Skills Hub v0.2",
+    page_title="Team Skills Hub v2.32",
     layout="wide",
     initial_sidebar_state="expanded"
 )
