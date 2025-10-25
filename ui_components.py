@@ -11,7 +11,7 @@ from typing import Dict, Any
 import config  # Import the centralized configuration
 
 # ==============================================================================
-# ORIGINAL UI COMPONENTS (UNCHANGED LOGIC, ADDED CONSTANTS/TYPING)
+# STREAMLINED & ORIGINAL UI COMPONENTS
 # ==============================================================================
 
 def render_strategic_overview(
@@ -22,7 +22,7 @@ def render_strategic_overview(
     score_parsing_errors: int
 ):
     """Renders the high-level dashboard tab."""
-    person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame())
+    # --- EDIT: person_summary no longer needed here ---
     risk_radar: pd.DataFrame = analytics.get('risk_radar', pd.DataFrame())
 
     col1, col2 = st.columns(2, gap="large")
@@ -39,20 +39,7 @@ def render_strategic_overview(
             avg_confidence = df_merged['Score'].mean() if not df_merged.empty else 0
             kpi3.metric("Average Confidence", f"{avg_confidence:.1%}")
 
-            st.markdown("**Talent Archetype Distribution**")
-            if not person_summary.empty:
-                archetype_counts = person_summary['Archetype'].value_counts()
-                if not archetype_counts.empty:
-                    fig_pie = px.pie(
-                        archetype_counts,
-                        values=archetype_counts.values,
-                        names=archetype_counts.index,
-                        hole=0.5,
-                    )
-                    fig_pie.update_layout(height=300, margin=dict(t=30, b=20, l=0, r=0), legend_orientation="h")
-                    st.plotly_chart(fig_pie, use_container_width=True)
-            else:
-                st.info("Archetype data not available.")
+            # --- EDIT: Moved Archetype Pie Chart to render_team_dna ---
 
     with col2:
         with st.container(border=True):
@@ -71,45 +58,16 @@ def render_strategic_overview(
                     st.info("All users completed the assessment.")
 
     st.divider()
-    col1, col2 = st.columns(2, gap="large")
-    with col1:
-        with st.container(border=True):
-            st.subheader("🚨 Skill Risk Radar")
-            st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
-            if not risk_radar.empty:
-                for _, row in risk_radar.head(5).iterrows():
-                    st.metric(label=row.name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
-            else:
-                st.info("No risk data available.")
-
-    with col2:
-        with st.container(border=True):
-            st.subheader("📡 Comparative Risk Profile")
-            if not risk_radar.empty:
-                risk_data_head = risk_radar.head(5).reset_index()
-                categories = ['Avg_Score', 'Risk Index', 'Expert_Count', 'Beginner_Count']
-                valid_categories = [c for c in categories if c in risk_data_head.columns]
-                
-                if valid_categories:
-                    normalized = risk_data_head[valid_categories].copy()
-                    for c in valid_categories:
-                        rng = risk_radar[c].max() - risk_radar[c].min()
-                        normalized[c] = (risk_data_head[c] - risk_radar[c].min()) / rng if rng > 0 else 0.5
-                    
-                    fig = go.Figure()
-                    for i, row in risk_data_head.iterrows():
-                        task_name = row['Task_Prefixed'][:40] + "..." if len(row['Task_Prefixed']) > 40 else row['Task_Prefixed']
-                        fig.add_trace(go.Scatterpolar(
-                            r=normalized.loc[i, valid_categories].values,
-                            theta=[c.replace('_', ' ') for c in valid_categories],
-                            fill='toself',
-                            name=task_name,
-                            hovertemplate=f"<b>{row['Task_Prefixed']}</b><br>Risk Index: {row['Risk Index']:.2f}<br>Avg Score: {row['Avg_Score']:.1%}<extra></extra>",
-                        ))
-                    fig.update_layout(polar=dict(radialaxis=dict(visible=False, range=[0, 1])), height=350, margin=dict(l=40, r=40, t=60, b=40))
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("Insufficient data for comparative risk profile.")
+    
+    # --- EDIT: Removed the 2nd column (Comparative Risk Profile) ---
+    with st.container(border=True):
+        st.subheader("🚨 Skill Risk Radar")
+        st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
+        if not risk_radar.empty:
+            for _, row in risk_radar.head(5).iterrows():
+                st.metric(label=row.name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
+        else:
+            st.info("No risk data available.")
 
 
 def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
@@ -169,10 +127,7 @@ def render_action_playbook(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     risk_radar: pd.DataFrame = analytics.get('risk_radar', pd.DataFrame())
     skill_corr: pd.DataFrame = analytics.get('skill_correlation', pd.DataFrame())
 
-    # --- EDIT: Removed "Project Gap Radar" tab ---
     sub2, sub3, sub4 = st.tabs(["💡 Training Combos", "👥 Group Builder", "🤝 Mentor Matchmaker"])
-    
-    # --- EDIT: Removed `with sub1:` block ---
 
     with sub2:
         st.subheader("💡 Training Combo Generator")
@@ -311,21 +266,15 @@ def render_team_profiles(
             st.subheader("📇 Team Roster")
             all_user_names_list = sorted(user_df['Name'].unique())
             
-            # --- BUG FIX & ENHANCEMENT ---
-            # Rank is now calculated once and merged correctly.
             ranking_df = person_summary.reset_index().sort_values('Avg Score', ascending=False)
             ranking_df['Rank'] = ranking_df['Avg Score'].rank(method='min', ascending=False).astype(int)
             
-            # Create a base dataframe of all users
             merged_ranking = user_df[['Name']].drop_duplicates().merge(
                 ranking_df[['Name', 'Rank', 'Avg Score', 'Archetype']], 
                 on='Name', 
                 how='left'
             )
-            # Flag those who have completed the assessment
             merged_ranking['Assessed'] = merged_ranking['Name'].isin(set(df_merged['Name'].unique()))
-            
-            # Sort by rank, but put non-assessed (NaN rank) at the bottom
             merged_ranking.sort_values('Rank', ascending=True, na_position='last', inplace=True)
             
             selected_person = st.selectbox("Select a Team Member", all_user_names_list, label_visibility="collapsed")
@@ -354,8 +303,6 @@ def render_team_profiles(
                 person_stats = person_summary.loc[selected_person]
                 person_data = df_merged[df_merged['Name'] == selected_person].copy()
                 
-                # --- BUG FIX ---
-                # Get the pre-calculated rank from the 'merged_ranking' dataframe
                 rank_val = merged_ranking.loc[merged_ranking['Name'] == selected_person, 'Rank'].iloc[0]
                 rank_display = f"#{int(rank_val)}" if pd.notna(rank_val) else "N/A"
 
@@ -396,82 +343,51 @@ def render_team_profiles(
 
 
 def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
-    """Renders the deep-dive analysis by skill/category."""
+    """
+    Renders the deep-dive analysis by skill/category.
+    --- EDIT: This is now a single-page tool, not a tabbed one. ---
+    """
     st.header("🧠 Skill Analysis")
     
-    skill_corr_matrix: pd.DataFrame = analytics.get('skill_correlation', pd.DataFrame())
-    hidden_stars: pd.DataFrame = analytics.get('hidden_stars', pd.DataFrame())
-    adjusted_ranking: pd.DataFrame = analytics.get('adjusted_ranking', pd.DataFrame())
-
-    sub1, sub2, sub3 = st.tabs(["📊 Skill Distribution", "🏆 Talent Composition", "🕸️ Skill Correlation"])
-    with sub1:
-        st.subheader("Deep Dive by Skill or Category")
-        analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
+    st.subheader("Deep Dive by Skill or Category")
+    analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
+    
+    if analysis_type == "Task":
+        options = sorted(df_merged['Task_Prefixed'].unique())
+        label, filter_col = "Select Task(s)", 'Task_Prefixed'
+    else:
+        options = sorted(df_merged['Category'].unique())
+        label, filter_col = "Select Category(s)", 'Category'
         
-        if analysis_type == "Task":
-            options = sorted(df_merged['Task_Prefixed'].unique())
-            label, filter_col = "Select Task(s)", 'Task_Prefixed'
-        else:
-            options = sorted(df_merged['Category'].unique())
-            label, filter_col = "Select Category(s)", 'Category'
-            
-        selected = st.multiselect(label, options, default=options[0] if options else None)
+    selected = st.multiselect(label, options, default=options[0] if options else None)
+    
+    if not selected:
+        st.warning(f"Please select at least one {analysis_type}.")
+    else:
+        skill_data = df_merged[df_merged[filter_col].isin(selected)]
         
-        if not selected:
-            st.warning(f"Please select at least one {analysis_type}.")
-        else:
-            skill_data = df_merged[df_merged[filter_col].isin(selected)]
-            
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Avg Confidence", f"{skill_data['Score'].mean():.1%}")
-            c2.metric("Experts (≥80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
-            c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < config.BEGINNER_THRESHOLD]['Name'].nunique())
-            st.divider()
-            
-            s1, s2 = st.columns(2)
-            with s1:
-                st.markdown("**Skill Leaderboard**")
-                leaderboard = skill_data.groupby('Name')['Score'].mean().sort_values(ascending=False).reset_index()
-                st.dataframe(
-                    leaderboard, 
-                    hide_index=True,
-                    column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)}
-                )
-            with s2:
-                st.markdown("**Score Distribution**")
-                fig = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution")
-                fig.update_layout(height=350, margin=dict(t=20, b=20), showlegend=False)
-                st.plotly_chart(fig, use_container_width=True)
-                
-    with sub2:
-        st.subheader("Talent Composition")
-        c1, c2 = st.columns([1, 2], gap="large")
-        with c1:
-            with st.container(border=True):
-                st.markdown("**🌟 Hidden Stars**")
-                st.caption("Mid-tier performers with high confidence in difficult skills.")
-                if hidden_stars.empty:
-                    st.info("No 'Hidden Stars' found.")
-                else:
-                    st.dataframe(hidden_stars[['Name', 'Task_Prefixed', 'Score']], hide_index=True, height=300)
-        with c2:
-            with st.container(border=True):
-                st.markdown("**🧗 Adjusted Difficulty Ranking**")
-                st.caption("Ranking of team members by total score, weighted by skill difficulty.")
-                st.dataframe(
-                    adjusted_ranking, 
-                    hide_index=True, height=350,
-                    column_config={"Adjusted Score": st.column_config.BarChartColumn("Adjusted Score", y_min=0)}
-                )
-                
-    with sub3:
-        st.subheader("Skill Correlation Heatmap")
-        if not skill_corr_matrix.empty:
-            fig = px.imshow(skill_corr_matrix, text_auto=".2f", aspect="auto", title="Skill Correlation Matrix")
-            fig.update_layout(height=600)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Avg Confidence", f"{skill_data['Score'].mean():.1%}")
+        c2.metric("Experts (≥80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
+        c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < config.BEGINNER_THRESHOLD]['Name'].nunique())
+        st.divider()
+        
+        s1, s2 = st.columns(2)
+        with s1:
+            st.markdown("**Skill Leaderboard**")
+            leaderboard = skill_data.groupby('Name')['Score'].mean().sort_values(ascending=False).reset_index()
+            st.dataframe(
+                leaderboard, 
+                hide_index=True,
+                column_config={"Score": st.column_config.ProgressColumn("Confidence", min_value=0, max_value=1)}
+            )
+        with s2:
+            st.markdown("**Score Distribution**")
+            fig = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution")
+            fig.update_layout(height=350, margin=dict(t=20, b=20), showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Skill correlation data not available.")
+
+    # --- EDIT: Removed 'Talent Composition' and 'Skill Correlation' sub-tabs ---
 
 
 # ==============================================================================
@@ -498,11 +414,9 @@ def render_team_dna(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     c1, c2 = st.columns(2)
     team1_name = c1.selectbox("Select Primary Team", all_teams, index=0)
     
-    # Options for comparison: another team or the company average
     comparison_options = ["Overall Company Average"] + [t for t in all_teams if t != team1_name]
     team2_name = c2.selectbox("Compare Against", comparison_options, index=0)
 
-    # Calculate fingerprints
     team1_members = person_summary[person_summary['Team Leader'] == team1_name].index
     team1_data = df_merged[df_merged['Name'].isin(team1_members)]
     
@@ -517,7 +431,6 @@ def render_team_dna(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         r=team1_fingerprint.values, theta=team1_fingerprint.index, fill='toself', name=f"Team: {team1_name}"
     ))
 
-    # Compare against average or team 2
     if team2_name == "Overall Company Average":
         company_fingerprint = df_merged.groupby('Category')['Score'].mean()
         fig.add_trace(go.Scatterpolar(
@@ -538,13 +451,32 @@ def render_team_dna(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     st.subheader("📊 Archetype Balance")
     st.markdown("Understand the persona mix of a team to identify potential imbalances.")
     
-    team_archetypes = person_summary[person_summary['Team Leader'] == team1_name]['Archetype'].value_counts(normalize=True) * 100
-    if not team_archetypes.empty:
-        fig_bar = px.bar(team_archetypes, y=team_archetypes.index, x=team_archetypes.values, orientation='h', text_auto='.0f', title=f"Archetype Composition for Team {team1_name} (%)")
-        fig_bar.update_layout(xaxis_title="Percentage of Team", yaxis_title="Archetype")
-        st.plotly_chart(fig_bar, use_container_width=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Overall Distribution**")
+        # --- EDIT: Added Archetype Pie Chart (from Overview) ---
+        archetype_counts = person_summary['Archetype'].value_counts()
+        if not archetype_counts.empty:
+            fig_pie = px.pie(
+                archetype_counts,
+                values=archetype_counts.values,
+                names=archetype_counts.index,
+                hole=0.5,
+            )
+            fig_pie.update_layout(height=300, margin=dict(t=30, b=20, l=0, r=0), legend_orientation="h")
+            st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Actionable insights based on archetypes
+    with col2:
+        st.markdown(f"**Composition for Team {team1_name}**")
+        team_archetypes = person_summary[person_summary['Team Leader'] == team1_name]['Archetype'].value_counts(normalize=True) * 100
+        if not team_archetypes.empty:
+            fig_bar = px.bar(team_archetypes, y=team_archetypes.index, x=team_archetypes.values, orientation='h', text_auto='.0f')
+            fig_bar.update_layout(height=300, xaxis_title="Percentage of Team", yaxis_title="Archetype", margin=dict(t=30, b=20))
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+    # Actionable insights based on archetypes
+    if not team_archetypes.empty:
         if team_archetypes.get(config.ARCHETYPE_NICHE_SPECIALIST, 0) > 40:
             st.warning(f"**Insight:** Team {team1_name} is heavily specialized. **Action:** Ensure projects have a 'Versatile Leader' to connect the dots and manage overall scope.")
         if team_archetypes.get(config.ARCHETYPE_VERSATILE_LEADER, 0) < 10:

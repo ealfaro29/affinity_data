@@ -5,7 +5,7 @@
 import pandas as pd
 from datetime import datetime
 import re
-from typing import Dict, Any  # <-- FIX 1: Removed 'pd_Series'
+from typing import Dict, Any
 import config  # Import the centralized configuration
 
 def _build_person_archetypes(df: pd.DataFrame, user_df: pd.DataFrame) -> pd.DataFrame:
@@ -98,33 +98,16 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     pipeline_candidates = pd.merge(pipeline_candidates, person_summary.reset_index()[['Name', 'Archetype']], on='Name')
     analytics['talent_pipeline'] = pipeline_candidates[['Name', 'Archetype', 'Task_Prefixed', 'Score']].sort_values('Score', ascending=False)
 
-    # 6. Hidden stars and adjusted ranking
-    task_avg = df.groupby('Task_Prefixed')['Score'].mean()
-    hard_tasks = task_avg[task_avg < config.CRITICAL_AVG_SCORE].index
-    mid_tier = person_summary[
-        (person_summary['Avg Score'] >= 0.5) & (person_summary['Avg Score'] < 0.8)
-    ].index
-    
-    analytics['hidden_stars'] = df[
-        (df['Name'].isin(mid_tier)) & 
-        (df['Task_Prefixed'].isin(hard_tasks)) & 
-        (df['Score'] >= config.HIDDEN_STAR_THRESHOLD)
-    ].copy()
+    # --- EDIT: Removed 'hidden_stars' and 'adjusted_ranking' calculations ---
 
-    # 7. Adjusted (difficulty-weighted) ranking
-    df_adj = df.copy()
-    df_adj['Difficulty Weight'] = df_adj['Task_Prefixed'].map(1 - task_avg)
-    df_adj['Adjusted Score'] = df_adj['Score'] * df_adj['Difficulty Weight']
-    analytics['adjusted_ranking'] = pd.DataFrame(df_adj.groupby('Name')['Adjusted Score'].sum().sort_values(ascending=False)).reset_index()
-
-    # 8. Skill correlation
+    # 6. Skill correlation (Still needed for 'Training Combos' feature)
     skill_pivot = df.pivot_table(index='Name', columns='Skill', values='Score', aggfunc='mean').fillna(df['Score'].mean())
     analytics['skill_correlation'] = skill_pivot.corr()
 
     return analytics
 
 
-def analyze_comment_themes(df_comments: pd.Series) -> pd.DataFrame: # <-- FIX 2: Changed to 'pd.Series'
+def analyze_comment_themes(df_comments: pd.Series) -> pd.DataFrame:
     """Uses regex to find common themes in a Series of free-text comments."""
     themes = {
         'Training/Guidance': r'training|learn|course|session|refresher|guide|help|practice',

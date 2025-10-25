@@ -40,7 +40,6 @@ def upload_landing_page():
 
     with st.container(border=True):
         st.subheader("1. Upload Your Data")
-        # --- EDIT: Removed the st.info line ---
         
         uploaded_csv = st.file_uploader(
             "Upload your User Data CSV file", 
@@ -127,28 +126,29 @@ def main_app():
     # --- UI Rendering ---
     st.title("🚀 Team Skills & Affinity Hub v2.32")
 
+    # --- EDIT: Streamlined Tab List ---
     tabs = st.tabs([
         "📈 Strategic Overview",
         "⭐ Affinity Status",
         "🗺️ Action Playbook",
         "👤 Team Profiles",
-        "🧠 Skill Analysis",
         "🧬 Team DNA & Dynamics",
+        "🧠 Skill Analysis",
         "🔭 Risk & Opportunity Forecaster",
     ])
 
     with tabs[0]:
         render_strategic_overview(df_merged, user_df, analytics, total_participants_in_file, score_parsing_errors)
     with tabs[1]:
-        render_affinity_status(user_df, analytics) # Pass analytics for comments
+        render_affinity_status(user_df, analytics)
     with tabs[2]:
         render_action_playbook(df_merged, analytics)
     with tabs[3]:
         render_team_profiles(df_merged, user_df, analytics)
     with tabs[4]:
-        render_skill_analysis(df_merged, analytics)
-    with tabs[5]:
         render_team_dna(df_merged, analytics)
+    with tabs[5]:
+        render_skill_analysis(df_merged, analytics)
     with tabs[6]:
         render_risk_opportunity(analytics)
 
