@@ -166,40 +166,14 @@ def render_action_playbook(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     st.header("🗺️ Action Playbook")
     
     person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame())
-    task_summary: pd.DataFrame = analytics.get('task_summary', pd.DataFrame())
     risk_radar: pd.DataFrame = analytics.get('risk_radar', pd.DataFrame())
     skill_corr: pd.DataFrame = analytics.get('skill_correlation', pd.DataFrame())
 
-    sub1, sub2, sub3, sub4 = st.tabs(["🎯 Project Gap Radar", "💡 Training Combos", "👥 Group Builder", "🤝 Mentor Matchmaker"])
-
-    with sub1:
-        st.subheader("🎯 Project Skill Gap Analysis")
-        st.info("**Decision:** Who to staff on a project? Which skills require urgent training or hiring to meet demand?")
-        
-        if task_summary.empty:
-            st.warning("No task data available for analysis.")
-        else:
-            all_skills = sorted(task_summary.index.unique())
-            required_skills = st.multiselect(
-                "Select the skills needed for your upcoming project:",
-                options=all_skills
-            )
-
-            if required_skills:
-                project_readiness = task_summary.loc[required_skills].copy()
-                def get_status(score: float) -> str:
-                    if score > 0.75: return "✅ Covered"
-                    elif score > 0.5: return "⚠️ At Risk"
-                    else: return "❌ Critical Gap"
-                
-                project_readiness['Status'] = project_readiness['Avg_Score'].apply(get_status)
-                st.dataframe(
-                    project_readiness[['Avg_Score', 'Expert_Count', 'Beginner_Count', 'Status']],
-                    column_config={
-                        "Avg_Score": st.column_config.ProgressColumn("Team Avg Confidence", format="%.1f%%", min_value=0, max_value=1)
-                    }, use_container_width=True
-                )
+    # --- EDIT: Removed "Project Gap Radar" tab ---
+    sub2, sub3, sub4 = st.tabs(["💡 Training Combos", "👥 Group Builder", "🤝 Mentor Matchmaker"])
     
+    # --- EDIT: Removed `with sub1:` block ---
+
     with sub2:
         st.subheader("💡 Training Combo Generator")
         if not risk_radar.empty and not skill_corr.empty:
