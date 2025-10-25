@@ -5,7 +5,7 @@
 import pandas as pd
 from datetime import datetime
 import re
-from typing import Dict, Any, pd_Series
+from typing import Dict, Any  # <-- FIX 1: Removed 'pd_Series'
 import config  # Import the centralized configuration
 
 def _build_person_archetypes(df: pd.DataFrame, user_df: pd.DataFrame) -> pd.DataFrame:
@@ -124,7 +124,7 @@ def compute_analytics(df: pd.DataFrame, user_df: pd.DataFrame) -> Dict[str, Any]
     return analytics
 
 
-def analyze_comment_themes(df_comments: pd.Series) -> pd.DataFrame:
+def analyze_comment_themes(df_comments: pd.Series) -> pd.DataFrame: # <-- FIX 2: Changed to 'pd.Series'
     """Uses regex to find common themes in a Series of free-text comments."""
     themes = {
         'Training/Guidance': r'training|learn|course|session|refresher|guide|help|practice',
