@@ -26,24 +26,72 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+def upload_landing_page():
+    """
+    Renders the file upload screen. This page is shown after login
+    but before data is loaded.
+    """
+    st.title("🚀 Welcome to the Team Skills Hub")
+    st.subheader("Please upload your data to begin")
+
+    # We assume tasks.json is a local file that defines the skills.
+    # The user only needs to upload their own team's CSV data.
+    tasks_json_path = "tasks.json" 
+
+    uploaded_csv = st.file_uploader("Upload your User Data CSV file", type="csv")
+
+    if uploaded_csv is not None:
+        st.info(f"File '{uploaded_csv.name}' uploaded. Click below to analyze.")
+        
+        if st.button("Load and Analyze Data", type="primary", use_container_width=True):
+            with st.spinner("Processing your data... This may take a moment."):
+                # Pass the uploaded file object directly to the data engine
+                data = load_and_process_data(uploaded_csv, tasks_json_path)
+            
+            if data is not None:
+                # Store the processed data in session state
+                st.session_state.processed_data = data
+                st.session_state.data_loaded = True
+                st.success("Data loaded successfully! 🎉")
+                st.rerun() # Rerun to trigger main_app()
+            else:
+                # If data processing failed
+                st.error("There was an error processing your file. Please check the file format.")
+                st.session_state.data_loaded = False
+                if 'processed_data' in st.session_state:
+                    del st.session_state.processed_data
+
 def main_app():
     """Renders the main application interface."""
+    
+    # --- Load data from session state ---
+    if 'processed_data' not in st.session_state:
+        st.error("Data not found. Please upload again.")
+        st.session_state.data_loaded = False
+        st.rerun()
+        return
+
+    data = st.session_state.processed_data
+    
+    # --- Sidebar ---
     st.sidebar.title("🚀 Team Skills Hub")
     st.sidebar.info("A strategic platform for talent intelligence and team development.")
+    
+    if st.sidebar.button("Upload New Data"):
+        # Clear session state to return to upload screen
+        st.session_state.data_loaded = False
+        if 'processed_data' in st.session_state:
+            del st.session_state.processed_data
+        st.rerun()
 
-    # --- Data Loading ---
-    data = load_and_process_data("userData.csv", "tasks.json")
-    if data is None:
-        st.error("Dashboard cannot be loaded. Check data files.")
-        st.stop()
-
+    # --- Extract data ---
     df_merged: pd.DataFrame = data['merged_df']
     user_df: pd.DataFrame = data['user_df']
     total_participants_in_file: int = data['total_count']
     score_parsing_errors: int = data['parsing_errors']
 
     if df_merged.empty:
-        st.warning("No participants with valid scores were found.")
+        st.warning("No participants with valid scores were found in the uploaded file.")
         st.stop()
 
     # --- Analytics Engine ---
@@ -77,7 +125,7 @@ def main_app():
     with tabs[2]:
         render_action_playbook(df_merged, analytics)
     with tabs[3]:
-        render_team_profiles(df_merged, user_df, analytics) # Bug fix applied here
+        render_team_profiles(df_merged, user_df, analytics)
     with tabs[4]:
         render_skill_analysis(df_merged, analytics)
     with tabs[5]:
@@ -86,15 +134,26 @@ def main_app():
         render_risk_opportunity(analytics)
 
 
-# --- Main execution ---
+# --- Main execution (State Machine) ---
 if __name__ == "__main__":
+    
+    # Initialize session state keys
+    if 'data_loaded' not in st.session_state:
+        st.session_state.data_loaded = False
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+        
     if DEVELOPMENT_MODE:
-        main_app()
+        st.session_state.logged_in = True # Bypass login in dev mode
+
+    # Control flow:
+    # 1. Check Login
+    # 2. Check Data
+    # 3. Run App
+    
+    if not st.session_state.logged_in:
+        login_page()
+    elif not st.session_state.data_loaded:
+        upload_landing_page()
     else:
-        if 'logged_in' not in st.session_state:
-            st.session_state.logged_in = False
-            
-        if st.session_state.logged_in:
-            main_app()
-        else:
-            login_page()
+        main_app()

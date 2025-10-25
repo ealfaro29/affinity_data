@@ -6,13 +6,16 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 import streamlit as st
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, IO
 
 @st.cache_data
-def load_and_process_data(user_csv_path: str, tasks_json_path: str) -> Optional[Dict[str, Any]]:
+def load_and_process_data(user_csv_file: IO[Any], tasks_json_path: str) -> Optional[Dict[str, Any]]:
     """
     Load, clean, and merge the user skills CSV and the tasks catalog JSON.
-    Filenames are intentionally fixed. Robust to missing columns and mixed value types.
+    
+    Args:
+        user_csv_file: An IO object (like an uploaded file) for the user data.
+        tasks_json_path: A string path to the local tasks.json catalog.
     
     Returns:
         A dict with merged_df, user_df, total_count, parsing_errors, or None on failure.
@@ -22,13 +25,14 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str) -> Optional[
     try:
         tasks_df = pd.read_json(tasks_json_path)['skills'].apply(pd.Series)
         tasks_df.rename(columns={'title': 'Task', 'id': 'task_id', 'category': 'Category'}, inplace=True)
+    except FileNotFoundError:
+        st.error(f"Critical error: tasks.json not found at path: {tasks_json_path}")
+        return None
     except Exception as e:
         st.error(f"Critical error reading tasks.json: {e}")
         return None
         
     # --- DYNAMIC TASK LOADING (ENHANCEMENT) ---
-    # Get the list of task IDs from tasks.json to dynamically build the column list
-    # This avoids the hardcoded 'range(1, 32)'
     if 'task_id' not in tasks_df.columns:
         st.error("Critical error: 'task_id' (from 'id') not found in tasks.json.")
         return None
@@ -36,11 +40,14 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str) -> Optional[
     task_cols = [f'Task {i}' for i in tasks_df['task_id']]
     num_tasks = len(task_cols)
 
-    # Read userData.csv → user_df
+    # Read uploaded user_csv_file → user_df
     try:
-        user_df = pd.read_csv(user_csv_path, sep=';', encoding='utf-8-sig')
+        # --- THIS IS THE KEY CHANGE ---
+        user_df = pd.read_csv(user_csv_file, sep=';', encoding='utf-8-sig')
+        # ----------------------------
+        
     except Exception as e:
-        st.error(f"Critical error reading userData.csv: {e}")
+        st.error(f"Critical error reading uploaded userData.csv: {e}")
         return None
 
     # Normalize headers and key columns
@@ -72,8 +79,6 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str) -> Optional[
         user_df[col] = user_df[col].fillna('').astype(str).str.strip()
 
     # Unpivot Task 1..N into long format
-    # Ensure all expected task columns exist, adding missing ones as empty if needed
-    # This prevents errors if the CSV is missing task columns
     present_task_cols = []
     for col in task_cols:
         if col in user_df.columns:
@@ -82,7 +87,7 @@ def load_and_process_data(user_csv_path: str, tasks_json_path: str) -> Optional[
     id_vars = [c for c in user_df.columns if c not in task_cols]
     
     if not present_task_cols:
-        st.error("No 'Task X' columns found in userData.csv.")
+        st.error("No 'Task X' columns found in the uploaded userData.csv.")
         return None
         
     df_long = pd.melt(user_df, id_vars=id_vars, value_vars=present_task_cols, var_name='task_id_str', value_name='Score')
