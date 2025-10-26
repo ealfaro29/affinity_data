@@ -18,7 +18,7 @@ MEDIUM_GRAY = "#7A7A7A"
 LIGHT_GRAY = "#CCCCCC"
 
 # ==============================================================================
-# UI Rendering Functions (Minimalist Style - Final Color Fix)
+# UI Rendering Functions (Minimalist Style with Containers)
 # ==============================================================================
 
 def render_strategic_overview(
@@ -28,13 +28,14 @@ def render_strategic_overview(
     total_participants_in_file: int,
     score_parsing_errors: int
 ):
-    """Renders the high-level dashboard tab (Minimalist)."""
+    """Renders the high-level dashboard tab (Minimalist with Containers)."""
     risk_radar: pd.DataFrame = analytics.get('risk_radar', pd.DataFrame())
     theme_counts: pd.DataFrame = analytics.get('comment_themes', pd.DataFrame())
 
     col1, col2 = st.columns(2, gap="large")
     with col1:
-        with st.container():
+        # --- Re-added border=True ---
+        with st.container(border=True):
             st.subheader("Team Vital Signs")
             kpi1, kpi2, kpi3 = st.columns(3)
             active_participants_count = df_merged['Name'].nunique()
@@ -44,7 +45,8 @@ def render_strategic_overview(
             avg_confidence = df_merged['Score'].mean() if not df_merged.empty else 0
             kpi3.metric("Average Confidence", f"{avg_confidence:.1%}")
 
-        with st.container():
+        # --- Re-added border=True ---
+        with st.container(border=True):
             st.subheader("Skill Risk Radar")
             st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
@@ -57,7 +59,8 @@ def render_strategic_overview(
                 st.info("No risk data available.")
 
     with col2:
-        with st.container():
+        # --- Re-added border=True ---
+        with st.container(border=True):
             st.subheader("Data Health Check")
             assessed_names = set(df_merged['Name'].unique())
             all_user_names = set(user_df['Name'].unique())
@@ -65,6 +68,7 @@ def render_strategic_overview(
 
             st.metric("Self-Assessment Response", f"{len(assessed_names)} / {len(all_user_names)}", f"{len(pending_assessment_names)} pending")
             st.metric("Score Data Quality", f"{score_parsing_errors} invalid entries", delta_color="off")
+            # Expander naturally has a background from the theme, doesn't need extra border
             with st.expander(f"View {len(pending_assessment_names)} pending"):
                 if pending_assessment_names:
                     pending_df = user_df[user_df['Name'].isin(pending_assessment_names)][['Name', 'Team Leader']]
@@ -72,7 +76,8 @@ def render_strategic_overview(
                 else:
                     st.info("All users completed the assessment.")
 
-        with st.container():
+        # --- Re-added border=True ---
+        with st.container(border=True):
             st.subheader("Top Comment Themes")
             st.caption("Top themes from all user comments.")
             if not theme_counts.empty:
@@ -85,10 +90,11 @@ def render_strategic_overview(
                 st.info("No comment data found.")
 
 def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
-    """Renders the Affinity license and feedback tab (Minimalist)."""
+    """Renders the Affinity license and feedback tab (Minimalist with Containers)."""
     st.header("Affinity Status & Team Feedback")
 
-    with st.container():
+    # --- Re-added border=True ---
+    with st.container(border=True):
         st.subheader("Overall Software Status")
         total_users = len(user_df)
         if total_users > 0:
@@ -100,7 +106,8 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
         else:
             st.info("No user data loaded.")
 
-    with st.container():
+    # --- Re-added border=True ---
+    with st.container(border=True):
         st.subheader("License Expiration Timeline")
         today = datetime.now()
         exp_df = user_df[user_df['License Expiration'].notna()].copy()
@@ -136,7 +143,8 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
         else:
             st.info("No license expiration data found.")
 
-    with st.container():
+    # --- Re-added border=True ---
+    with st.container(border=True):
         st.subheader("All Team Feedback")
         st.caption("Unfiltered comments from the 'Specific Needs' column.")
         comments_df = user_df[['Name', 'Comments']].drop_duplicates()
@@ -152,7 +160,7 @@ def render_team_profiles(
     user_df: pd.DataFrame,
     analytics: Dict[str, Any]
 ):
-    """Renders the deep-dive profile view (Minimalist)."""
+    """Renders the deep-dive profile view (Minimalist with Containers)."""
     st.header("Team Profiles")
     person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame())
 
@@ -163,7 +171,8 @@ def render_team_profiles(
         return
 
     with col1:
-        with st.container():
+        # --- Re-added border=True ---
+        with st.container(border=True):
             st.subheader("Team Roster")
             all_user_names_list = sorted(user_df['Name'].unique())
 
@@ -187,7 +196,8 @@ def render_team_profiles(
             )
 
     with col2:
-        with st.container():
+        # --- Re-added border=True ---
+        with st.container(border=True):
             st.subheader(f"Profile: {selected_person}")
 
             if selected_person not in set(df_merged['Name'].unique()):
@@ -222,6 +232,7 @@ def render_team_profiles(
                 person_skills = person_data.set_index('Task_Prefixed')['Score'].sort_values(ascending=False)
 
                 sc1, sc2 = st.columns(2)
+                # Group skills/areas in bordered containers if desired, or leave flat
                 with sc1:
                     st.markdown("##### Top 5 Skills")
                     top_5 = person_skills.head(5).reset_index()
@@ -247,66 +258,67 @@ def render_team_profiles(
 
 def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     """
-    Renders the deep-dive analysis by skill/category (Minimalist).
+    Renders the deep-dive analysis by skill/category (Minimalist with Containers).
     """
     st.header("Skill Analysis")
 
-    st.subheader("Deep Dive by Skill or Category")
-    analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
+    # --- Re-added border=True ---
+    with st.container(border=True):
+        st.subheader("Deep Dive by Skill or Category")
+        analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
 
-    if analysis_type == "Task":
-        options = sorted(df_merged['Task_Prefixed'].unique())
-        label, filter_col = "Select Task(s)", 'Task_Prefixed'
-    else:
-        options = sorted(df_merged['Category'].unique())
-        label, filter_col = "Select Category(s)", 'Category'
+        if analysis_type == "Task":
+            options = sorted(df_merged['Task_Prefixed'].unique())
+            label, filter_col = "Select Task(s)", 'Task_Prefixed'
+        else:
+            options = sorted(df_merged['Category'].unique())
+            label, filter_col = "Select Category(s)", 'Category'
 
-    selected = st.multiselect(label, options, default=options[0] if options else None)
+        selected = st.multiselect(label, options, default=options[0] if options else None)
 
-    if not selected:
-        st.warning(f"Please select at least one {analysis_type}.")
-    else:
-        skill_data = df_merged[df_merged[filter_col].isin(selected)]
-        avg_score_selected = skill_data['Score'].mean()
+        if not selected:
+            st.warning(f"Please select at least one {analysis_type}.")
+        else:
+            skill_data = df_merged[df_merged[filter_col].isin(selected)]
+            avg_score_selected = skill_data['Score'].mean()
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Avg Confidence", f"{avg_score_selected:.1%}")
-        c2.metric("Experts (>=80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
-        c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < config.BEGINNER_THRESHOLD]['Name'].nunique())
-        st.divider()
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Avg Confidence", f"{avg_score_selected:.1%}")
+            c2.metric("Experts (>=80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
+            c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < config.BEGINNER_THRESHOLD]['Name'].nunique())
+            st.divider()
 
-        s1, s2 = st.columns(2)
-        with s1:
-            st.markdown("**Skill Leaderboard**")
-            leaderboard = skill_data.groupby('Name')['Score'].mean().sort_values(ascending=False).reset_index()
-            st.dataframe(
-                leaderboard, hide_index=True, use_container_width=True,
-                column_config={"Score": st.column_config.ProgressColumn(
-                    "Confidence", format="%.1f%%", min_value=0, max_value=1
-                    )}
-            )
-        with s2:
-            st.markdown("**Score Distribution**")
-            fig_hist = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution",
-                                    template=PLOTLY_TEMPLATE)
-            fig_hist.update_traces(marker_color=MEDIUM_GRAY)
-            fig_hist.update_layout(height=350, margin=dict(t=30, b=20), showlegend=False, yaxis_title=None, xaxis_title="Confidence Score")
+            s1, s2 = st.columns(2)
+            with s1:
+                st.markdown("**Skill Leaderboard**")
+                leaderboard = skill_data.groupby('Name')['Score'].mean().sort_values(ascending=False).reset_index()
+                st.dataframe(
+                    leaderboard, hide_index=True, use_container_width=True,
+                    column_config={"Score": st.column_config.ProgressColumn(
+                        "Confidence", format="%.1f%%", min_value=0, max_value=1
+                        )}
+                )
+            with s2:
+                st.markdown("**Score Distribution**")
+                fig_hist = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution",
+                                        template=PLOTLY_TEMPLATE)
+                fig_hist.update_traces(marker_color=MEDIUM_GRAY)
+                fig_hist.update_layout(height=350, margin=dict(t=30, b=20), showlegend=False, yaxis_title=None, xaxis_title="Confidence Score")
 
-            # --- FINAL COLOR FIX: Set annotation font color ---
-            fig_hist.add_vline(
-                x=avg_score_selected, line_width=2, line_dash="dash", line_color=DARK_GRAY,
-                annotation_text=f"Avg: {avg_score_selected:.1%}",
-                annotation_position="top left",
-                annotation_font_color=DARK_GRAY # Explicitly set text color
-            )
-            st.plotly_chart(fig_hist, use_container_width=True)
+                fig_hist.add_vline(
+                    x=avg_score_selected, line_width=2, line_dash="dash", line_color=DARK_GRAY,
+                    annotation_text=f"Avg: {avg_score_selected:.1%}",
+                    annotation_position="top left",
+                    annotation_font_color=DARK_GRAY
+                )
+                st.plotly_chart(fig_hist, use_container_width=True)
 
 
 # ==============================================================================
-# STREAMLINED ACTION TAB (Minimalist Style)
+# STREAMLINED ACTION TAB (Minimalist Style with Containers)
 # ==============================================================================
 def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
-    """Renders the risk mitigation and group builder workbench (Minimalist)."""
+    """Renders the risk mitigation and group builder workbench (Minimalist with Containers)."""
     st.header("Action Workbench")
     st.caption("Use these tools to mitigate risks and build training groups.")
 
@@ -322,73 +334,81 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     sub_tabs = st.tabs(["Risk Mitigation", "Group Builder"])
 
     with sub_tabs[0]:
-        st.subheader("Risk Mitigation Workbench")
-        st.markdown("**Goal:** Proactively solve your biggest talent risks.")
+        # --- Re-added border=True ---
+        with st.container(border=True):
+            st.subheader("Risk Mitigation Workbench")
+            st.markdown("**Goal:** Proactively solve your biggest talent risks.")
 
-        if risk_matrix.empty:
-            st.info("No high-risk skills detected.")
-        else:
-            high_risk_skills = risk_matrix.sort_values('Risk Index', ascending=False)
-            selected_risk = st.selectbox(
-                "Select a high-risk skill to solve:",
-                options=high_risk_skills.index,
-                format_func=lambda x: f"{x} (Risk Index: {high_risk_skills.loc[x, 'Risk Index']:.2f})"
-            )
+            if risk_matrix.empty:
+                st.info("No high-risk skills detected.")
+            else:
+                high_risk_skills = risk_matrix.sort_values('Risk Index', ascending=False)
+                selected_risk = st.selectbox(
+                    "Select a high-risk skill to solve:",
+                    options=high_risk_skills.index,
+                    format_func=lambda x: f"{x} (Risk Index: {high_risk_skills.loc[x, 'Risk Index']:.2f})"
+                )
 
-            if selected_risk:
-                st.info(f"**Analysis for: {selected_risk}**")
-                risk_info = high_risk_skills.loc[selected_risk]
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Avg Confidence", f"{risk_info['Avg_Score']:.1%}")
-                c2.metric("Experts (>=80%)", f"{int(risk_info['Expert_Count'])}")
-                c3.metric("Beginners (<40%)", f"{int(risk_info['Beginner_Count'])}")
+                if selected_risk:
+                    st.info(f"**Analysis for: {selected_risk}**")
+                    risk_info = high_risk_skills.loc[selected_risk]
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Avg Confidence", f"{risk_info['Avg_Score']:.1%}")
+                    c2.metric("Experts (>=80%)", f"{int(risk_info['Expert_Count'])}")
+                    c3.metric("Beginners (<40%)", f"{int(risk_info['Beginner_Count'])}")
 
-                st.markdown("---")
-                st.subheader("Action Plan")
+                    st.markdown("---")
+                    st.subheader("Action Plan")
 
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.markdown("##### Talent Pipeline")
-                    st.caption("People with 60-79% confidence.")
-                    pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
-                    if not pipeline_for_skill.empty:
-                        st.dataframe(pipeline_for_skill[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True)
-                    else:
-                        st.info("No candidates found in the pipeline.")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.markdown("##### Talent Pipeline")
+                        st.caption("People with 60-79% confidence.")
+                        pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
+                        if not pipeline_for_skill.empty:
+                            st.dataframe(pipeline_for_skill[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True)
+                        else:
+                            st.info("No candidates found in the pipeline.")
 
-                with c2:
-                    st.markdown("##### Available Mentors")
-                    st.caption("Experts (>=80%) for this skill.")
-                    all_experts = df_merged_lookup[
-                        (df_merged_lookup['Task_Prefixed'] == selected_risk) &
-                        (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
-                    ]
-                    if not all_experts.empty:
-                         experts_with_archetype = pd.merge(
-                            all_experts[['Name', 'Score']].drop_duplicates(subset=['Name']),
-                            person_summary[['Archetype']], left_on='Name', right_index=True, how='left'
-                         )
-                         st.dataframe(
-                            experts_with_archetype[['Name', 'Archetype', 'Score']].sort_values('Score', ascending=False),
-                            hide_index=True, use_container_width=True
-                         )
-                    else:
-                         st.info("No experts available to mentor.")
+                    with c2:
+                        st.markdown("##### Available Mentors")
+                        st.caption("Experts (>=80%) for this skill.")
+                        all_experts = df_merged_lookup[
+                            (df_merged_lookup['Task_Prefixed'] == selected_risk) &
+                            (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
+                        ]
+                        if not all_experts.empty:
+                             experts_with_archetype = pd.merge(
+                                all_experts[['Name', 'Score']].drop_duplicates(subset=['Name']),
+                                person_summary[['Archetype']], left_on='Name', right_index=True, how='left'
+                             )
+                             st.dataframe(
+                                experts_with_archetype[['Name', 'Archetype', 'Score']].sort_values('Score', ascending=False),
+                                hide_index=True, use_container_width=True
+                             )
+                        else:
+                             st.info("No experts available to mentor.")
 
     with sub_tabs[1]:
-        st.subheader("Custom Training Group Builder")
-        st.markdown("**Goal:** Manually create training groups for any skill.")
-        with st.form("group_builder_form"):
-            all_tasks = sorted(df_merged_lookup['Task_Prefixed'].unique())
-            selected_task = st.selectbox(
-                "Select a skill for the training session:", all_tasks, index=0 if all_tasks else None
-            )
-            g1, g2, g3 = st.columns(3)
-            num_groups = g1.number_input("Number of groups:", 1, 10, value=2)
-            num_per_group = g2.number_input("People per group:", 2, 10, value=4)
-            add_mentors = g3.checkbox("Assign mentor?", value=True)
+         # --- Re-added border=True ---
+        with st.container(border=True):
+            st.subheader("Custom Training Group Builder")
+            st.markdown("**Goal:** Manually create training groups for any skill.")
+            # Form naturally creates visual separation
+            with st.form("group_builder_form"):
+                all_tasks = sorted(df_merged_lookup['Task_Prefixed'].unique())
+                selected_task = st.selectbox(
+                    "Select a skill for the training session:", all_tasks, index=0 if all_tasks else None
+                )
+                g1, g2, g3 = st.columns(3)
+                num_groups = g1.number_input("Number of groups:", 1, 10, value=2)
+                num_per_group = g2.number_input("People per group:", 2, 10, value=4)
+                add_mentors = g3.checkbox("Assign mentor?", value=True)
 
-            if st.form_submit_button("Generate Groups", type="primary", use_container_width=True):
+                submitted = st.form_submit_button("Generate Groups", type="primary", use_container_width=True)
+
+            # Display generated groups outside the form
+            if submitted: # Check if form was submitted in this run
                 if not selected_task:
                     st.warning("Please select a skill.")
                 else:
@@ -406,7 +426,8 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
                         for i in range(num_groups):
                             with cols[i]:
-                                with st.container():
+                                # Use border here to clearly separate each group
+                                with st.container(border=True):
                                     st.markdown(f"**Group {i+1}**")
                                     group_data = []
                                     if add_mentors:
