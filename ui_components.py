@@ -14,7 +14,11 @@ import config
 GRAY_PALETTE = px.colors.sequential.Greys
 PLOTLY_TEMPLATE = "plotly_white"
 
-# --- EDIT: Removed HOW_TO_USE_GUIDE text ---
+# --- Guide Text (Kept here for import by app.py) ---
+HOW_TO_USE_GUIDE = """
+## 📖 Team Skills Hub v3.2: How-to Use Guide
+# ... (guide text remains the same) ...
+"""
 
 # ==============================================================================
 # UI Rendering Functions
@@ -55,22 +59,36 @@ def render_strategic_overview(
 
                 st.markdown("**Risk Visualization**")
                 risk_data_head_reset = risk_data_head.reset_index().rename(columns={'index': 'Task'})
-                risk_melted = risk_data_head_reset.melt(id_vars='Task', value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'], var_name='Metric', value_name='Value')
 
-                fig_risk_bar = px.bar(
-                    risk_melted,
-                    x='Task',
-                    y='Value',
-                    color='Metric',
-                    barmode='group',
-                    text_auto=True,
-                    height=300,
-                    labels={'Value': 'Count / Index Value', 'Task': 'High-Risk Task'},
-                    color_discrete_sequence=GRAY_PALETTE[2::2],
-                    template=PLOTLY_TEMPLATE
-                )
-                fig_risk_bar.update_layout(margin=dict(t=20, b=20, l=0, r=0), legend_title_text='')
-                st.plotly_chart(fig_risk_bar, use_container_width=True)
+                # --- EDIT: Add check for required columns before melt ---
+                required_cols = ['Task', 'Risk Index', 'Expert_Count', 'Beginner_Count']
+                missing_cols = [col for col in required_cols if col not in risk_data_head_reset.columns]
+
+                if not missing_cols:
+                    risk_melted = risk_data_head_reset.melt(
+                        id_vars='Task',
+                        value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'],
+                        var_name='Metric',
+                        value_name='Value'
+                    )
+
+                    fig_risk_bar = px.bar(
+                        risk_melted,
+                        x='Task',
+                        y='Value',
+                        color='Metric',
+                        barmode='group',
+                        text_auto=True,
+                        height=300,
+                        labels={'Value': 'Count / Index Value', 'Task': 'High-Risk Task'},
+                        color_discrete_sequence=GRAY_PALETTE[2::2],
+                        template=PLOTLY_TEMPLATE
+                    )
+                    fig_risk_bar.update_layout(margin=dict(t=20, b=20, l=0, r=0), legend_title_text='')
+                    st.plotly_chart(fig_risk_bar, use_container_width=True)
+                else:
+                    st.warning(f"Could not generate Risk Visualization chart. Missing columns: {', '.join(missing_cols)}")
+                    st.caption("This might happen if there was an issue calculating risk metrics.")
 
             else:
                 st.info("No risk data available.")
@@ -336,7 +354,7 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     """Renders the risk mitigation and group builder workbench with visual enhancements."""
     st.header("🔭 Action Workbench")
-    st.caption("Use these tools to mitigate risks and build training groups.") # Changed from st.info
+    st.caption("Use these tools to mitigate risks and build training groups.")
 
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
     talent_pipeline: pd.DataFrame = analytics.get('talent_pipeline', pd.DataFrame())
@@ -364,7 +382,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
             )
 
             if selected_risk:
-                st.warning(f"**Analysis for: {selected_risk}**") # Changed from st.error
+                st.warning(f"**Analysis for: {selected_risk}**")
                 risk_info = high_risk_skills.loc[selected_risk]
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Avg Confidence", f"{risk_info['Avg_Score']:.1%}")
@@ -382,7 +400,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                     if not pipeline_for_skill.empty:
                         st.dataframe(pipeline_for_skill[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True)
                     else:
-                        st.info("No candidates in the immediate pipeline. Broaden search.") # Changed from st.warning
+                        st.info("No candidates in the immediate pipeline. Broaden search.")
 
                 with c2:
                     st.markdown("##### 🤝 **Assign Mentors**")
@@ -392,16 +410,17 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                         (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
                     ]
                     if not all_experts.empty:
-                        experts_with_archetype = pd.merge(
+                         experts_with_archetype = pd.merge(
                             all_experts[['Name', 'Score']].drop_duplicates(subset=['Name']),
                             person_summary[['Archetype']], left_on='Name', right_index=True, how='left'
                          )
-                        st.dataframe(
+                         st.dataframe(
                             experts_with_archetype[['Name', 'Archetype', 'Score']].sort_values('Score', ascending=False),
                             hide_index=True, use_container_width=True
                          )
+
                     else:
-                         st.warning("No experts available to mentor this skill.") # Changed from st.error
+                         st.warning("No experts available to mentor this skill.")
 
     with sub_tabs[1]:
         st.subheader("Custom Training Group Builder")
@@ -454,5 +473,3 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                                          st.dataframe(pd.DataFrame(group_data), hide_index=True, use_container_width=True)
                                     else:
                                          st.warning(f"Not enough people to form Group {i+1}.")
-
-# --- EDIT: Removed render_how_to_guide function ---
