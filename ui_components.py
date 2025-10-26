@@ -8,17 +8,17 @@ import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime
 from typing import Dict, Any
-import config # Use updated config without emojis
+import config
 
 # --- Style Constants for Charts ---
-GRAY_PALETTE = px.colors.sequential.Greys # Grayscale palette
-PLOTLY_TEMPLATE = "plotly_white" # Clean Plotly template
+GRAY_PALETTE = px.colors.sequential.Greys
+PLOTLY_TEMPLATE = "plotly_white"
 DARK_GRAY = "#4A4A4A"
 MEDIUM_GRAY = "#7A7A7A"
 LIGHT_GRAY = "#CCCCCC"
 
 # ==============================================================================
-# UI Rendering Functions (Minimalist Style)
+# UI Rendering Functions (Minimalist Style - Emojis Removed)
 # ==============================================================================
 
 def render_strategic_overview(
@@ -34,9 +34,8 @@ def render_strategic_overview(
 
     col1, col2 = st.columns(2, gap="large")
     with col1:
-        # Use st.container without border for cleaner look, relies on theme background
         with st.container():
-            st.subheader("Team Vital Signs")
+            st.subheader("Team Vital Signs") # Removed emoji
             kpi1, kpi2, kpi3 = st.columns(3)
             active_participants_count = df_merged['Name'].nunique()
             kpi1.metric("People in File", total_participants_in_file)
@@ -46,42 +45,40 @@ def render_strategic_overview(
             kpi3.metric("Average Confidence", f"{avg_confidence:.1%}")
 
         with st.container():
-            st.subheader("Skill Risk Radar")
+            st.subheader("Skill Risk Radar") # Removed emoji
             st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
                 risk_data_head = risk_radar.head(5)
                 for skill_name, row in risk_data_head.iterrows():
                     avg_score = row.get('Avg_Score', 0)
                     risk_index = row.get('Risk Index', 0)
-                    # Use delta_color='normal' for gray delta
                     st.metric(label=skill_name, value=f"{avg_score:.1%} Avg. Confidence", delta=f"Risk Index: {risk_index:.2f}", delta_color="normal")
             else:
-                st.info("No risk data available.") # st.info is neutral
+                st.info("No risk data available.")
 
     with col2:
         with st.container():
-            st.subheader("Data Health Check")
+            st.subheader("Data Health Check") # Removed emoji
             assessed_names = set(df_merged['Name'].unique())
             all_user_names = set(user_df['Name'].unique())
             pending_assessment_names = all_user_names - assessed_names
 
             st.metric("Self-Assessment Response", f"{len(assessed_names)} / {len(all_user_names)}", f"{len(pending_assessment_names)} pending")
-            st.metric("Score Data Quality", f"{score_parsing_errors} invalid entries", delta_color="off") # 'off' uses normal text color
+            st.metric("Score Data Quality", f"{score_parsing_errors} invalid entries", delta_color="off")
             with st.expander(f"View {len(pending_assessment_names)} pending"):
                 if pending_assessment_names:
                     pending_df = user_df[user_df['Name'].isin(pending_assessment_names)][['Name', 'Team Leader']]
-                    # Use use_container_width for better table rendering
                     st.dataframe(pending_df, hide_index=True, use_container_width=True)
                 else:
                     st.info("All users completed the assessment.")
 
         with st.container():
-            st.subheader("Top Comment Themes")
+            st.subheader("Top Comment Themes") # Removed emoji
             st.caption("Top themes from all user comments.")
             if not theme_counts.empty:
                 fig_bar = px.bar(theme_counts.head(5), x='Mentions', y=theme_counts.head(5).index, orientation='h', text_auto=True,
                                  template=PLOTLY_TEMPLATE)
-                fig_bar.update_traces(marker_color=DARK_GRAY) # Use defined dark gray
+                fig_bar.update_traces(marker_color=DARK_GRAY)
                 fig_bar.update_layout(height=300, margin=dict(t=20, b=20, l=0, r=0), yaxis_title=None, xaxis_title="Mentions")
                 st.plotly_chart(fig_bar, use_container_width=True)
             else:
@@ -92,7 +89,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
     st.header("Affinity Status & Team Feedback") # Removed emoji
 
     with st.container():
-        st.subheader("Overall Software Status")
+        st.subheader("Overall Software Status") # Removed emoji
         total_users = len(user_df)
         if total_users > 0:
             k1, k2 = st.columns(2)
@@ -104,7 +101,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
             st.info("No user data loaded.")
 
     with st.container():
-        st.subheader("License Expiration Timeline")
+        st.subheader("License Expiration Timeline") # Removed emoji
         today = datetime.now()
         exp_df = user_df[user_df['License Expiration'].notna()].copy()
         if not exp_df.empty:
@@ -123,7 +120,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
                     exp_df.sort_values('Days Left'),
                     x_start="Start", x_end="License Expiration", y="Name", text="Days Left",
                     color="Urgency",
-                    color_discrete_map={ # Map to grays
+                    color_discrete_map={
                         'Urgent (Dark Gray)': DARK_GRAY,
                         'Medium (Gray)': MEDIUM_GRAY,
                         'Low (Light Gray)': LIGHT_GRAY
@@ -135,12 +132,12 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
                 fig.update_layout(legend_title_text='Urgency')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("No upcoming license expirations.") # Use info for neutral success
+                st.info("No upcoming license expirations.") # Use info instead of success with emoji
         else:
             st.info("No license expiration data found.")
 
     with st.container():
-        st.subheader("All Team Feedback")
+        st.subheader("All Team Feedback") # Removed emoji
         st.caption("Unfiltered comments from the 'Specific Needs' column.")
         comments_df = user_df[['Name', 'Comments']].drop_duplicates()
         comments_df = comments_df[comments_df['Comments'] != '']
@@ -166,8 +163,8 @@ def render_team_profiles(
         return
 
     with col1:
-        with st.container(): # Removed border
-            st.subheader("Team Roster")
+        with st.container():
+            st.subheader("Team Roster") # Removed emoji
             all_user_names_list = sorted(user_df['Name'].unique())
 
             ranking_df = person_summary.reset_index().sort_values('Avg Score', ascending=False)
@@ -180,7 +177,7 @@ def render_team_profiles(
             selected_person = st.selectbox("Select a Team Member", all_user_names_list, label_visibility="collapsed")
 
             st.dataframe(
-                merged_ranking, height=750, hide_index=True, use_container_width=True, # Use container width
+                merged_ranking, height=750, hide_index=True, use_container_width=True,
                 column_config={
                     "Assessed": st.column_config.CheckboxColumn("Assessed?", disabled=True),
                     "Avg Score": st.column_config.ProgressColumn(
@@ -190,13 +187,13 @@ def render_team_profiles(
             )
 
     with col2:
-        with st.container(): # Removed border
-            st.subheader(f"Profile: {selected_person}") # Use subheader for consistency
+        with st.container():
+            st.subheader(f"Profile: {selected_person}") # Removed emoji
 
             if selected_person not in set(df_merged['Name'].unique()):
                 st.warning(f"**{selected_person}** has not completed the self-assessment.")
             elif selected_person not in person_summary.index:
-                st.error(f"Data for {selected_person} is missing from the person summary.") # Keep error for missing data
+                st.error(f"Data for {selected_person} is missing from the person summary.")
             else:
                 person_stats = person_summary.loc[selected_person]
                 person_data = df_merged[df_merged['Name'] == selected_person].copy()
@@ -206,8 +203,7 @@ def render_team_profiles(
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Overall Rank", rank_display)
                 c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}")
-                # Use plain text for Archetype
-                c3.metric("Archetype", person_stats['Archetype'])
+                c3.metric("Archetype", person_stats['Archetype']) # Already plain text from config
                 st.divider()
 
                 team_avg_scores = df_merged.groupby('Category')['Score'].mean()
@@ -227,25 +223,25 @@ def render_team_profiles(
 
                 sc1, sc2 = st.columns(2)
                 with sc1:
-                    st.markdown("##### Top 5 Skills") # Use markdown for hierarchy
+                    st.markdown("##### Top 5 Skills") # Removed emoji
                     top_5 = person_skills.head(5).reset_index()
                     fig_top = px.bar(
-                        top_5, y='Task_Prefixed', x='Score', orientation='h', text='Score', height=250,
+                        top_5, y='Task_Prefixed', x='Score', orientation='h', text='Score', height=250, title="Top 5 Skills",
                         template=PLOTLY_TEMPLATE
                     )
                     fig_top.update_traces(texttemplate='%{x:.0%}', textposition='outside', marker_color=DARK_GRAY)
-                    fig_top.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=10,b=0)) # Reduced top margin
+                    fig_top.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=30,b=0))
                     st.plotly_chart(fig_top, use_container_width=True)
 
                 with sc2:
-                    st.markdown("##### Top 5 Improvement Areas")
+                    st.markdown("##### Top 5 Improvement Areas") # Removed emoji
                     bottom_5 = person_skills.tail(5).sort_values(ascending=True).reset_index()
                     fig_bottom = px.bar(
-                        bottom_5, y='Task_Prefixed', x='Score', orientation='h', text='Score', height=250,
+                        bottom_5, y='Task_Prefixed', x='Score', orientation='h', text='Score', height=250, title="Top 5 Improvement Areas",
                         template=PLOTLY_TEMPLATE
                     )
                     fig_bottom.update_traces(texttemplate='%{x:.0%}', textposition='outside', marker_color=MEDIUM_GRAY)
-                    fig_bottom.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=10,b=0)) # Reduced top margin
+                    fig_bottom.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=30,b=0))
                     st.plotly_chart(fig_bottom, use_container_width=True)
 
 
@@ -296,9 +292,8 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
             fig_hist.update_traces(marker_color=MEDIUM_GRAY)
             fig_hist.update_layout(height=350, margin=dict(t=30, b=20), showlegend=False, yaxis_title=None, xaxis_title="Confidence Score")
 
-            # Use dark gray dashed line for average
             fig_hist.add_vline(
-                x=avg_score_selected, line_width=2, line_dash="dash", line_color=DARK_GRAY,
+                x=avg_score_selected, line_width=2, line_dash="dash", line_color=DARK_GRAY, # Changed line color
                 annotation_text=f"Avg: {avg_score_selected:.1%}", annotation_position="top left"
             )
             st.plotly_chart(fig_hist, use_container_width=True)
@@ -328,7 +323,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         st.markdown("**Goal:** Proactively solve your biggest talent risks.")
 
         if risk_matrix.empty:
-            st.info("No high-risk skills detected. The team is well-balanced.") # Use info
+            st.info("No high-risk skills detected.") # Use info
         else:
             high_risk_skills = risk_matrix.sort_values('Risk Index', ascending=False)
             selected_risk = st.selectbox(
@@ -338,7 +333,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
             )
 
             if selected_risk:
-                st.info(f"**Analysis for: {selected_risk}**") # Use info
+                st.info(f"**Analysis for: {selected_risk}**")
                 risk_info = high_risk_skills.loc[selected_risk]
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Avg Confidence", f"{risk_info['Avg_Score']:.1%}")
@@ -350,7 +345,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.markdown("##### Talent Pipeline") # Simpler title
+                    st.markdown("##### Talent Pipeline") # Removed emoji
                     st.caption("People with 60-79% confidence.")
                     pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
                     if not pipeline_for_skill.empty:
@@ -359,7 +354,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                         st.info("No candidates found in the pipeline.")
 
                 with c2:
-                    st.markdown("##### Available Mentors") # Simpler title
+                    st.markdown("##### Available Mentors") # Removed emoji
                     st.caption("Experts (≥80%) for this skill.")
                     all_experts = df_merged_lookup[
                         (df_merged_lookup['Task_Prefixed'] == selected_risk) &
