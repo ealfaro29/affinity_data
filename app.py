@@ -7,25 +7,25 @@ import pandas as pd
 # config import is not needed if DEVELOPMENT_MODE is removed and constants are handled within modules
 from data_engine import load_and_process_data, generate_csv_template, generate_task_guide
 from analytics_engine import compute_analytics, analyze_comment_themes
+# --- This is the import block mentioned in the error ---
 from ui_components import (
     render_strategic_overview,
     render_affinity_status,
     render_team_profiles,
     render_skill_analysis,
     render_action_workbench,
-    render_how_to_guide  # <-- IMPORT NEW GUIDE FUNCTION
-    # Modal and login imports removed
+    render_how_to_guide  # Ensure this function exists in ui_components.py
 )
+# --- End of import block ---
 from typing import Dict, Any
-# Modal import removed
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.3", # Version bump
+    page_title="Team Skills Hub v3.3",
     layout="wide"
 )
 
-# --- EDIT: HOW_TO_USE_GUIDE text moved to ui_components.py ---
+# ... (rest of app.py remains the same as the previous correct version)
 
 def upload_landing_page():
     """
@@ -33,8 +33,6 @@ def upload_landing_page():
     """
     st.title("🚀 Welcome to the Team Skills Hub")
     st.markdown("Follow the steps to analyze your team's skills.")
-
-    # --- EDIT: Removed Modal initialization and button ---
 
     tasks_json_path = "tasks.json"
 
@@ -135,6 +133,7 @@ def main_app():
     # Refresh button moved here, outside sidebar
     st.button("🔄 Upload New Data", on_click=lambda: st.session_state.clear(), help="Clear current data and return to upload screen.")
 
+
     if df_merged.empty:
         st.warning("No participants with valid scores were found in the uploaded file.")
         st.stop()
@@ -152,7 +151,6 @@ def main_app():
     # --- UI Rendering ---
     st.title("🚀 Team Skills Hub v3.3") # Version bump
 
-    # --- EDIT: Added "How-to Guide" Tab ---
     tabs = st.tabs([
         "📈 Strategic Overview",
         "⭐ Affinity Status",
