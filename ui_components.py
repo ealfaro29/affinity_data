@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, Any
 import config
 
-# --- Guide Text ---
+# --- Guide Text (Kept here for import by app.py) ---
 HOW_TO_USE_GUIDE = """
 ## 📖 Team Skills Hub v3.2: How-to Use Guide
 
@@ -99,7 +99,7 @@ Use the **Team Skills Hub** regularly to monitor progress, identify critical are
 """
 
 # ==============================================================================
-# UI Rendering Functions
+# UI Rendering Functions (No Guide Function Needed Here Anymore)
 # ==============================================================================
 
 def render_strategic_overview(
@@ -546,10 +546,6 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                                     else:
                                         st.warning(f"Not enough people to form Group {i+1}.")
 
-# --- EDIT: New Function to Render the Guide ---
-def render_how_to_guide():
-    """Displays the How-to Use guide text."""
-    st.header("📖 How to Use the Team Skills Hub")
-    st.markdown(HOW_TO_USE_GUIDE, unsafe_allow_html=True)
+# --- EDIT: Removed render_how_to_guide function ---
 
 # --- EDIT: Removed login_page function ---
