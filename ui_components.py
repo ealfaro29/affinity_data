@@ -14,7 +14,7 @@ import config
 GRAY_PALETTE = px.colors.sequential.Greys
 PLOTLY_TEMPLATE = "plotly_white"
 
-# --- EDIT: Variable HOW_TO_USE_GUIDE eliminada de aquí ---
+# --- Guide Text is now in guide.md ---
 
 # ==============================================================================
 # UI Rendering Functions
@@ -51,39 +51,54 @@ def render_strategic_overview(
             if not risk_radar.empty:
                 risk_data_head = risk_radar.head(5)
                 for skill_name, row in risk_data_head.iterrows():
-                    st.metric(label=skill_name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
+                    # Attempt to access columns safely
+                    avg_score = row.get('Avg_Score', 0)
+                    risk_index = row.get('Risk Index', 0)
+                    st.metric(label=skill_name, value=f"{avg_score:.1%} Avg. Confidence", delta=f"Risk Index: {risk_index:.2f}", delta_color="inverse")
 
                 st.markdown("**Risk Visualization**")
-                risk_data_head_reset = risk_data_head.reset_index().rename(columns={'Task_Prefixed': 'Task'})
+                # --- FIX 2: Use Task_Prefixed directly ---
+                risk_data_head_reset = risk_data_head.reset_index() # Index becomes 'Task_Prefixed' column
 
-                required_cols = ['Task', 'Risk Index', 'Expert_Count', 'Beginner_Count']
-                missing_cols = [col for col in required_cols if col not in risk_data_head_reset.columns]
+                # Check if essential columns for melting exist
+                required_melt_cols = ['Task_Prefixed', 'Risk Index', 'Expert_Count', 'Beginner_Count']
+                missing_melt_cols = [col for col in required_melt_cols if col not in risk_data_head_reset.columns]
 
-                if not missing_cols:
-                    risk_melted = risk_data_head_reset.melt(
-                        id_vars='Task',
-                        value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'],
-                        var_name='Metric',
-                        value_name='Value'
-                    )
+                if not missing_melt_cols:
+                    try:
+                        risk_melted = risk_data_head_reset.melt(
+                            id_vars='Task_Prefixed', # Use the actual column name
+                            value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'],
+                            var_name='Metric',
+                            value_name='Value'
+                        )
 
-                    fig_risk_bar = px.bar(
-                        risk_melted,
-                        x='Task',
-                        y='Value',
-                        color='Metric',
-                        barmode='group',
-                        text_auto=True,
-                        height=300,
-                        labels={'Value': 'Count / Index Value', 'Task': 'High-Risk Task'},
-                        color_discrete_sequence=GRAY_PALETTE[2::2],
-                        template=PLOTLY_TEMPLATE
-                    )
-                    fig_risk_bar.update_layout(margin=dict(t=20, b=20, l=0, r=0), legend_title_text='')
-                    st.plotly_chart(fig_risk_bar, use_container_width=True)
+                        fig_risk_bar = px.bar(
+                            risk_melted,
+                            x='Task_Prefixed', # Use the actual column name
+                            y='Value',
+                            color='Metric',
+                            barmode='group',
+                            text_auto=True,
+                            height=300,
+                            labels={'Value': 'Count / Index Value', 'Task_Prefixed': 'High-Risk Task'}, # Adjust label
+                            color_discrete_sequence=GRAY_PALETTE[2::2],
+                            template=PLOTLY_TEMPLATE
+                        )
+                        fig_risk_bar.update_layout(margin=dict(t=20, b=20, l=0, r=0), legend_title_text='')
+                        st.plotly_chart(fig_risk_bar, use_container_width=True)
+
+                    except KeyError as e:
+                         # Catch potential KeyErrors during melt or plotting just in case
+                         st.warning(f"Could not generate Risk Visualization chart due to a data issue: {e}")
+                         st.caption("Please check if 'Risk Index', 'Expert_Count', and 'Beginner_Count' were calculated correctly.")
+                    except Exception as e: # Catch any other unexpected errors during plotting
+                         st.warning(f"An unexpected error occurred while generating the Risk Visualization chart: {e}")
+
                 else:
-                    st.warning(f"Could not generate Risk Visualization chart. Missing columns: {', '.join(missing_cols)}")
-                    st.caption("This might happen if there was an issue calculating risk metrics.")
+                    # This warning indicates a problem upstream (analytics_engine.py)
+                    st.warning(f"Could not generate Risk Visualization chart. Missing calculated columns: {', '.join(missing_melt_cols)}")
+                    st.caption("This usually means there was an issue calculating the risk metrics.")
 
             else:
                 st.info("No risk data available.")
