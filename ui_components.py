@@ -50,55 +50,15 @@ def render_strategic_overview(
             st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
                 risk_data_head = risk_radar.head(5)
+                # Display metrics for the top 5 risks
                 for skill_name, row in risk_data_head.iterrows():
-                    # Attempt to access columns safely
                     avg_score = row.get('Avg_Score', 0)
                     risk_index = row.get('Risk Index', 0)
                     st.metric(label=skill_name, value=f"{avg_score:.1%} Avg. Confidence", delta=f"Risk Index: {risk_index:.2f}", delta_color="inverse")
 
-                st.markdown("**Risk Visualization**")
-                # --- FIX 2: Use Task_Prefixed directly ---
-                risk_data_head_reset = risk_data_head.reset_index() # Index becomes 'Task_Prefixed' column
-
-                # Check if essential columns for melting exist
-                required_melt_cols = ['Task_Prefixed', 'Risk Index', 'Expert_Count', 'Beginner_Count']
-                missing_melt_cols = [col for col in required_melt_cols if col not in risk_data_head_reset.columns]
-
-                if not missing_melt_cols:
-                    try:
-                        risk_melted = risk_data_head_reset.melt(
-                            id_vars='Task_Prefixed', # Use the actual column name
-                            value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'],
-                            var_name='Metric',
-                            value_name='Value'
-                        )
-
-                        fig_risk_bar = px.bar(
-                            risk_melted,
-                            x='Task_Prefixed', # Use the actual column name
-                            y='Value',
-                            color='Metric',
-                            barmode='group',
-                            text_auto=True,
-                            height=300,
-                            labels={'Value': 'Count / Index Value', 'Task_Prefixed': 'High-Risk Task'}, # Adjust label
-                            color_discrete_sequence=GRAY_PALETTE[2::2],
-                            template=PLOTLY_TEMPLATE
-                        )
-                        fig_risk_bar.update_layout(margin=dict(t=20, b=20, l=0, r=0), legend_title_text='')
-                        st.plotly_chart(fig_risk_bar, use_container_width=True)
-
-                    except KeyError as e:
-                         # Catch potential KeyErrors during melt or plotting just in case
-                         st.warning(f"Could not generate Risk Visualization chart due to a data issue: {e}")
-                         st.caption("Please check if 'Risk Index', 'Expert_Count', and 'Beginner_Count' were calculated correctly.")
-                    except Exception as e: # Catch any other unexpected errors during plotting
-                         st.warning(f"An unexpected error occurred while generating the Risk Visualization chart: {e}")
-
-                else:
-                    # This warning indicates a problem upstream (analytics_engine.py)
-                    st.warning(f"Could not generate Risk Visualization chart. Missing calculated columns: {', '.join(missing_melt_cols)}")
-                    st.caption("This usually means there was an issue calculating the risk metrics.")
+                # --- EDIT: Removed the "Risk Visualization" bar chart ---
+                # The code block for creating risk_data_head_reset, risk_melted,
+                # fig_risk_bar, and st.plotly_chart(fig_risk_bar, ...) has been deleted.
 
             else:
                 st.info("No risk data available.")
