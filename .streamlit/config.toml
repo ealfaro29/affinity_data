@@ -1,0 +1,17 @@
+# .streamlit/config.toml
+
+[theme]
+# Colores primarios y de fondo
+primaryColor="#555555"  # Un gris oscuro para elementos interactivos
+backgroundColor="#FFFFFF" # Fondo blanco
+secondaryBackgroundColor="#F0F2F6" # Un gris muy claro para fondos secundarios (ej. expanders)
+textColor="#31333F" # Texto principal oscuro, casi negro
+
+# Fuente (si Streamlit la soporta en el entorno)
+# Opciones comunes: "sans serif", "serif", "monospace"
+# Para un look Apple, "sans serif" es lo más cercano por defecto.
+font="sans serif"
+
+[mapbox]
+# Estilo de mapas (no aplica a esta app, pero es parte del tema)
+style = "light"
