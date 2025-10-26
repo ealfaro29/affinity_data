@@ -18,7 +18,7 @@ MEDIUM_GRAY = "#7A7A7A"
 LIGHT_GRAY = "#CCCCCC"
 
 # ==============================================================================
-# UI Rendering Functions (Minimalist Style - Emojis REALLY Removed)
+# UI Rendering Functions (Minimalist Style - Final Color Fix)
 # ==============================================================================
 
 def render_strategic_overview(
@@ -35,7 +35,7 @@ def render_strategic_overview(
     col1, col2 = st.columns(2, gap="large")
     with col1:
         with st.container():
-            st.subheader("Team Vital Signs") # No Emoji
+            st.subheader("Team Vital Signs")
             kpi1, kpi2, kpi3 = st.columns(3)
             active_participants_count = df_merged['Name'].nunique()
             kpi1.metric("People in File", total_participants_in_file)
@@ -45,7 +45,7 @@ def render_strategic_overview(
             kpi3.metric("Average Confidence", f"{avg_confidence:.1%}")
 
         with st.container():
-            st.subheader("Skill Risk Radar") # No Emoji
+            st.subheader("Skill Risk Radar")
             st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
                 risk_data_head = risk_radar.head(5)
@@ -58,7 +58,7 @@ def render_strategic_overview(
 
     with col2:
         with st.container():
-            st.subheader("Data Health Check") # No Emoji
+            st.subheader("Data Health Check")
             assessed_names = set(df_merged['Name'].unique())
             all_user_names = set(user_df['Name'].unique())
             pending_assessment_names = all_user_names - assessed_names
@@ -73,7 +73,7 @@ def render_strategic_overview(
                     st.info("All users completed the assessment.")
 
         with st.container():
-            st.subheader("Top Comment Themes") # No Emoji
+            st.subheader("Top Comment Themes")
             st.caption("Top themes from all user comments.")
             if not theme_counts.empty:
                 fig_bar = px.bar(theme_counts.head(5), x='Mentions', y=theme_counts.head(5).index, orientation='h', text_auto=True,
@@ -86,10 +86,10 @@ def render_strategic_overview(
 
 def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
     """Renders the Affinity license and feedback tab (Minimalist)."""
-    st.header("Affinity Status & Team Feedback") # No Emoji
+    st.header("Affinity Status & Team Feedback")
 
     with st.container():
-        st.subheader("Overall Software Status") # No Emoji
+        st.subheader("Overall Software Status")
         total_users = len(user_df)
         if total_users > 0:
             k1, k2 = st.columns(2)
@@ -101,7 +101,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
             st.info("No user data loaded.")
 
     with st.container():
-        st.subheader("License Expiration Timeline") # No Emoji
+        st.subheader("License Expiration Timeline")
         today = datetime.now()
         exp_df = user_df[user_df['License Expiration'].notna()].copy()
         if not exp_df.empty:
@@ -132,12 +132,12 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
                 fig.update_layout(legend_title_text='Urgency')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("No upcoming license expirations.") # No Emoji
+                st.info("No upcoming license expirations.")
         else:
             st.info("No license expiration data found.")
 
     with st.container():
-        st.subheader("All Team Feedback") # No Emoji
+        st.subheader("All Team Feedback")
         st.caption("Unfiltered comments from the 'Specific Needs' column.")
         comments_df = user_df[['Name', 'Comments']].drop_duplicates()
         comments_df = comments_df[comments_df['Comments'] != '']
@@ -153,7 +153,7 @@ def render_team_profiles(
     analytics: Dict[str, Any]
 ):
     """Renders the deep-dive profile view (Minimalist)."""
-    st.header("Team Profiles") # No Emoji
+    st.header("Team Profiles")
     person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame())
 
     col1, col2 = st.columns([1, 2], gap="large")
@@ -164,7 +164,7 @@ def render_team_profiles(
 
     with col1:
         with st.container():
-            st.subheader("Team Roster") # No Emoji
+            st.subheader("Team Roster")
             all_user_names_list = sorted(user_df['Name'].unique())
 
             ranking_df = person_summary.reset_index().sort_values('Avg Score', ascending=False)
@@ -188,7 +188,7 @@ def render_team_profiles(
 
     with col2:
         with st.container():
-            st.subheader(f"Profile: {selected_person}") # No Emoji
+            st.subheader(f"Profile: {selected_person}")
 
             if selected_person not in set(df_merged['Name'].unique()):
                 st.warning(f"**{selected_person}** has not completed the self-assessment.")
@@ -203,7 +203,7 @@ def render_team_profiles(
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Overall Rank", rank_display)
                 c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}")
-                c3.metric("Archetype", person_stats['Archetype']) # Already plain text
+                c3.metric("Archetype", person_stats['Archetype'])
                 st.divider()
 
                 team_avg_scores = df_merged.groupby('Category')['Score'].mean()
@@ -223,7 +223,7 @@ def render_team_profiles(
 
                 sc1, sc2 = st.columns(2)
                 with sc1:
-                    st.markdown("##### Top 5 Skills") # No Emoji
+                    st.markdown("##### Top 5 Skills")
                     top_5 = person_skills.head(5).reset_index()
                     fig_top = px.bar(
                         top_5, y='Task_Prefixed', x='Score', orientation='h', text='Score', height=250, title="Top 5 Skills",
@@ -234,7 +234,7 @@ def render_team_profiles(
                     st.plotly_chart(fig_top, use_container_width=True)
 
                 with sc2:
-                    st.markdown("##### Top 5 Improvement Areas") # No Emoji
+                    st.markdown("##### Top 5 Improvement Areas")
                     bottom_5 = person_skills.tail(5).sort_values(ascending=True).reset_index()
                     fig_bottom = px.bar(
                         bottom_5, y='Task_Prefixed', x='Score', orientation='h', text='Score', height=250, title="Top 5 Improvement Areas",
@@ -249,7 +249,7 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     """
     Renders the deep-dive analysis by skill/category (Minimalist).
     """
-    st.header("Skill Analysis") # No Emoji
+    st.header("Skill Analysis")
 
     st.subheader("Deep Dive by Skill or Category")
     analysis_type = st.radio("Analyze by:", ["Category", "Task"], horizontal=True)
@@ -292,9 +292,12 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
             fig_hist.update_traces(marker_color=MEDIUM_GRAY)
             fig_hist.update_layout(height=350, margin=dict(t=30, b=20), showlegend=False, yaxis_title=None, xaxis_title="Confidence Score")
 
+            # --- FINAL COLOR FIX: Set annotation font color ---
             fig_hist.add_vline(
                 x=avg_score_selected, line_width=2, line_dash="dash", line_color=DARK_GRAY,
-                annotation_text=f"Avg: {avg_score_selected:.1%}", annotation_position="top left"
+                annotation_text=f"Avg: {avg_score_selected:.1%}",
+                annotation_position="top left",
+                annotation_font_color=DARK_GRAY # Explicitly set text color
             )
             st.plotly_chart(fig_hist, use_container_width=True)
 
@@ -304,7 +307,7 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 # ==============================================================================
 def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     """Renders the risk mitigation and group builder workbench (Minimalist)."""
-    st.header("Action Workbench") # No Emoji
+    st.header("Action Workbench")
     st.caption("Use these tools to mitigate risks and build training groups.")
 
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
@@ -316,14 +319,14 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         st.warning("Required data not available for this module.")
         return
 
-    sub_tabs = st.tabs(["Risk Mitigation", "Group Builder"]) # No Emojis
+    sub_tabs = st.tabs(["Risk Mitigation", "Group Builder"])
 
     with sub_tabs[0]:
         st.subheader("Risk Mitigation Workbench")
         st.markdown("**Goal:** Proactively solve your biggest talent risks.")
 
         if risk_matrix.empty:
-            st.info("No high-risk skills detected.") # No Emoji
+            st.info("No high-risk skills detected.")
         else:
             high_risk_skills = risk_matrix.sort_values('Risk Index', ascending=False)
             selected_risk = st.selectbox(
@@ -345,7 +348,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.markdown("##### Talent Pipeline") # No Emoji
+                    st.markdown("##### Talent Pipeline")
                     st.caption("People with 60-79% confidence.")
                     pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
                     if not pipeline_for_skill.empty:
@@ -354,7 +357,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                         st.info("No candidates found in the pipeline.")
 
                 with c2:
-                    st.markdown("##### Available Mentors") # No Emoji
+                    st.markdown("##### Available Mentors")
                     st.caption("Experts (>=80%) for this skill.")
                     all_experts = df_merged_lookup[
                         (df_merged_lookup['Task_Prefixed'] == selected_risk) &
@@ -370,7 +373,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                             hide_index=True, use_container_width=True
                          )
                     else:
-                         st.info("No experts available to mentor.") # No Emoji
+                         st.info("No experts available to mentor.")
 
     with sub_tabs[1]:
         st.subheader("Custom Training Group Builder")
@@ -389,7 +392,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                 if not selected_task:
                     st.warning("Please select a skill.")
                 else:
-                    st.subheader(f"Generated Groups for: {selected_task}") # No Emoji
+                    st.subheader(f"Generated Groups for: {selected_task}")
                     filtered_df = df_merged_lookup[df_merged_lookup['Task_Prefixed'] == selected_task]
 
                     if filtered_df.empty:
@@ -410,13 +413,13 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                                         available_mentors = mentors[~mentors.index.isin(assigned)]
                                         if not available_mentors.empty:
                                             m_name = available_mentors.index[0]
-                                            group_data.append({'Role': 'Mentor', 'Name': m_name, 'Score': f"{available_mentors.iloc[0]:.1%}"}) # No Emoji
+                                            group_data.append({'Role': 'Mentor', 'Name': m_name, 'Score': f"{available_mentors.iloc[0]:.1%}"})
                                             assigned.add(m_name)
                                     needed = num_per_group - len(group_data)
                                     if needed > 0:
                                         group_learners = learners[~learners.index.isin(assigned)].head(needed)
                                         for name, score in group_learners.items():
-                                             group_data.append({'Role': 'Learner', 'Name': name, 'Score': f"{score:.1%}"}) # No Emoji
+                                             group_data.append({'Role': 'Learner', 'Name': name, 'Score': f"{score:.1%}"})
                                              assigned.add(name)
 
                                     if group_data:
