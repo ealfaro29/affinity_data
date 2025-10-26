@@ -4,7 +4,7 @@
 
 import streamlit as st
 import pandas as pd
-from config import * # Import constants directly if needed, or keep as config.
+# config import is not needed if DEVELOPMENT_MODE is removed and constants are handled within modules
 from data_engine import load_and_process_data, generate_csv_template, generate_task_guide
 from analytics_engine import compute_analytics, analyze_comment_themes
 from ui_components import (
@@ -12,129 +12,29 @@ from ui_components import (
     render_affinity_status,
     render_team_profiles,
     render_skill_analysis,
-    render_action_workbench
+    render_action_workbench,
+    render_how_to_guide  # <-- IMPORT NEW GUIDE FUNCTION
+    # Modal and login imports removed
 )
 from typing import Dict, Any
-from streamlit_modal import Modal # <-- IMPORT MODAL LIBRARY
+# Modal import removed
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.2",
+    page_title="Team Skills Hub v3.3", # Version bump
     layout="wide"
 )
 
-# --- EDIT: Define the How-to Use Guide Text ---
-HOW_TO_USE_GUIDE = """
-## 📖 Team Skills Hub v3.2: How-to Use Guide
-
-### Introduction
-
-Welcome to the **Team Skills Hub**, your central platform for understanding and developing your team's technical skills. This tool allows you to visualize self-assessed competencies, identify risks, find improvement opportunities, and plan development actions.
-
----
-
-### Getting Started: Uploading Your Data
-
-When you open the application, you'll see the welcome screen.
-
-1.  **(Optional) Download Resources:**
-    * **CSV Data Template:** If it's your first time or your data isn't ready, download this template. It contains all necessary columns (`BPS`, `Team Leader`, `Task 1`, `Task 2`, etc.) and an example row to guide you. Fill this template with your team's information.
-    * **Task Reference Guide:** Download a simple plain text list with the ID and name of each task (skill) assessed. Useful for understanding what each `Task X` refers to when filling out the template.
-2.  **Upload Data File:**
-    * Drag and drop your CSV file (either the one filled using the template or one you already have in that format) into the designated area, or click to browse for it on your computer.
-    * The application will automatically process the file. If everything is correct, it will take you to the main dashboard. If there are errors (e.g., incorrect format, missing columns), it will display a message asking you to review your file.
-
----
-
-### 📈 Tab: Strategic Overview
-
-This tab gives you a high-level view of the team's health and risks.
-
-* **📊 Team Vital Signs:** KPIs showing total people, active participants (% response rate), and the overall average confidence score.
-* **🩺 Data Health Check:** Shows assessment response rate, data quality issues (parsing errors), and lists pending participants.
-* **🚨 Skill Risk Radar:** Lists the top 5 skills with the highest risk (many beginners, few experts) and visualizes the Risk Index vs. Expert/Beginner counts.
-* **🗣️ Top Comment Themes:** Bar chart of the most frequent topics mentioned in user feedback.
-
----
-
-### ⭐ Tab: Affinity Status
-
-Focuses on Affinity software management and team feedback.
-
-* **📊 Overall Software Status:** Metrics on active licenses and completion of McK training.
-* **🚨 License Expiration Timeline:** Visual timeline of upcoming license expirations, color-coded by urgency.
-* **🗣️ All Team Feedback:** A table displaying all raw comments provided by users.
-
----
-
-### 👤 Tab: Team Profiles
-
-Explore individual skill profiles.
-
-* **📇 Team Roster (Left Column):** Select a team member from this ranked list (includes Rank, Avg Score, Archetype, Assessed status).
-* **📇 Profile: [Selected Person] (Right Column):**
-    * **Metrics:** Shows the selected person's Rank, Avg Score, and calculated Archetype (Versatile Leader, Niche Specialist, Consistent Learner, Needs Support).
-    * **Radar Chart:** Compares the individual's confidence *by category* against the team average.
-    * **Strengths & Development Areas:** Bar charts showing the person's Top 5 skills and Top 5 areas for improvement.
-
----
-
-### 🧠 Tab: Skill Analysis
-
-Deep dive into team performance on specific skills or categories.
-
-* **Deep Dive:** Filter data by `Category` or specific `Task`.
-* **Metrics:** Shows Avg Confidence, number of Experts (>=80%), and number of Beginners (<40%) *for the selected filter*.
-* **Skill Leaderboard:** Ranks individuals based on their average confidence *in the selected skills/categories*.
-* **Score Distribution:** Histogram showing the spread of scores for the selection, with a line indicating the average.
-
----
-
-### 🔭 Tab: Action Workbench
-
-Tools for making decisions and planning development.
-
-* **Sub-Tab: 🚨 Risk Mitigation:**
-    * Select a high-risk skill.
-    * View analysis (Avg Confidence, Experts, Beginners for that skill).
-    * See the **Talent Pipeline** (potential learners, 60-79% confidence) and available **Mentors** (Experts >=80% confidence, with their Archetype).
-* **Sub-Tab: 👥 Group Builder:**
-    * Select *any* skill.
-    * Configure number of groups and people per group.
-    * Optionally assign mentors automatically.
-    * Generates balanced training groups (Mentor + Learners).
-
----
-
-### Conclusion
-
-Use the **Team Skills Hub** regularly to monitor progress, identify critical areas, and plan informed, data-driven development interventions (training, mentoring) to boost your team's capabilities!
-"""
-
+# --- EDIT: HOW_TO_USE_GUIDE text moved to ui_components.py ---
 
 def upload_landing_page():
     """
-    Renders the file upload screen with a How-to Use modal.
+    Renders the file upload screen. Does NOT include the guide anymore.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
     st.markdown("Follow the steps to analyze your team's skills.")
 
-    # --- EDIT: Initialize Modal ---
-    howto_modal = Modal(
-        "How to Use This App",
-        key="howto-modal", # Assign a unique key
-        # Optional: Set max_width
-        # max_width=700
-    )
-
-    # --- EDIT: Add Button to Open Modal ---
-    if st.button("📖 How to Use This App"):
-        howto_modal.open()
-
-    # --- EDIT: Define Modal Content ---
-    if howto_modal.is_open():
-        with howto_modal.container():
-            st.markdown(HOW_TO_USE_GUIDE, unsafe_allow_html=True) # Use markdown for guide text
+    # --- EDIT: Removed Modal initialization and button ---
 
     tasks_json_path = "tasks.json"
 
@@ -216,7 +116,7 @@ def upload_landing_page():
 
 
 def main_app():
-    """Renders the main application interface."""
+    """Renders the main application interface including the How-to Guide tab."""
 
     if 'processed_data' not in st.session_state:
         st.error("Data not found. Please upload again.")
@@ -231,6 +131,9 @@ def main_app():
     user_df: pd.DataFrame = data['user_df']
     total_participants_in_file: int = data['total_count']
     score_parsing_errors: int = data['parsing_errors']
+
+    # Refresh button moved here, outside sidebar
+    st.button("🔄 Upload New Data", on_click=lambda: st.session_state.clear(), help="Clear current data and return to upload screen.")
 
     if df_merged.empty:
         st.warning("No participants with valid scores were found in the uploaded file.")
@@ -247,14 +150,16 @@ def main_app():
         analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
 
     # --- UI Rendering ---
-    st.title("🚀 Team Skills Hub v3.2")
+    st.title("🚀 Team Skills Hub v3.3") # Version bump
 
+    # --- EDIT: Added "How-to Guide" Tab ---
     tabs = st.tabs([
         "📈 Strategic Overview",
         "⭐ Affinity Status",
         "👤 Team Profiles",
         "🧠 Skill Analysis",
         "🔭 Action Workbench",
+        "📖 How-to Guide" # New Tab
     ])
 
     with tabs[0]:
@@ -267,6 +172,8 @@ def main_app():
         render_skill_analysis(df_merged, analytics)
     with tabs[4]:
         render_action_workbench(df_merged, analytics)
+    with tabs[5]:
+        render_how_to_guide() # Call the new function
 
 
 # --- Main execution (State Machine) ---
@@ -275,7 +182,7 @@ if __name__ == "__main__":
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
 
-    # --- Simplified state check ---
+    # Simplified state check (No login)
     if not st.session_state.data_loaded:
         upload_landing_page()
     else:

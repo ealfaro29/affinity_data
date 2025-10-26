@@ -10,8 +10,96 @@ from datetime import datetime
 from typing import Dict, Any
 import config
 
+# --- EDIT: Moved Guide Text Here ---
+HOW_TO_USE_GUIDE = """
+## 📖 Team Skills Hub v3.2: How-to Use Guide
+
+### Introduction
+
+Welcome to the **Team Skills Hub**, your central platform for understanding and developing your team's technical skills. This tool allows you to visualize self-assessed competencies, identify risks, find improvement opportunities, and plan development actions.
+
+---
+
+### Getting Started: Uploading Your Data
+
+When you open the application, you'll see the welcome screen.
+
+1.  **(Optional) Download Resources:**
+    * **CSV Data Template:** If it's your first time or your data isn't ready, download this template. It contains all necessary columns (`BPS`, `Team Leader`, `Task 1`, `Task 2`, etc.) and an example row to guide you. Fill this template with your team's information.
+    * **Task Reference Guide:** Download a simple plain text list with the ID and name of each task (skill) assessed. Useful for understanding what each `Task X` refers to when filling out the template.
+2.  **Upload Data File:**
+    * Drag and drop your CSV file (either the one filled using the template or one you already have in that format) into the designated area, or click to browse for it on your computer.
+    * The application will automatically process the file. If everything is correct, it will take you to the main dashboard. If there are errors (e.g., incorrect format, missing columns), it will display a message asking you to review your file.
+
+---
+
+### 📈 Tab: Strategic Overview
+
+This tab gives you a high-level view of the team's health and risks.
+
+* **📊 Team Vital Signs:** KPIs showing total people, active participants (% response rate), and the overall average confidence score.
+* **🩺 Data Health Check:** Shows assessment response rate, data quality issues (parsing errors), and lists pending participants.
+* **🚨 Skill Risk Radar:** Lists the top 5 skills with the highest risk (many beginners, few experts) and visualizes the Risk Index vs. Expert/Beginner counts.
+* **🗣️ Top Comment Themes:** Bar chart of the most frequent topics mentioned in user feedback.
+
+---
+
+### ⭐ Tab: Affinity Status
+
+Focuses on Affinity software management and team feedback.
+
+* **📊 Overall Software Status:** Metrics on active licenses and completion of McK training.
+* **🚨 License Expiration Timeline:** Visual timeline of upcoming license expirations, color-coded by urgency.
+* **🗣️ All Team Feedback:** A table displaying all raw comments provided by users.
+
+---
+
+### 👤 Tab: Team Profiles
+
+Explore individual skill profiles.
+
+* **📇 Team Roster (Left Column):** Select a team member from this ranked list (includes Rank, Avg Score, Archetype, Assessed status).
+* **📇 Profile: [Selected Person] (Right Column):**
+    * **Metrics:** Shows the selected person's Rank, Avg Score, and calculated Archetype (Versatile Leader, Niche Specialist, Consistent Learner, Needs Support).
+    * **Radar Chart:** Compares the individual's confidence *by category* against the team average.
+    * **Strengths & Development Areas:** Bar charts showing the person's Top 5 skills and Top 5 areas for improvement.
+
+---
+
+### 🧠 Tab: Skill Analysis
+
+Deep dive into team performance on specific skills or categories.
+
+* **Deep Dive:** Filter data by `Category` or specific `Task`.
+* **Metrics:** Shows Avg Confidence, number of Experts (>=80%), and number of Beginners (<40%) *for the selected filter*.
+* **Skill Leaderboard:** Ranks individuals based on their average confidence *in the selected skills/categories*.
+* **Score Distribution:** Histogram showing the spread of scores for the selection, with a line indicating the average.
+
+---
+
+### 🔭 Tab: Action Workbench
+
+Tools for making decisions and planning development.
+
+* **Sub-Tab: 🚨 Risk Mitigation:**
+    * Select a high-risk skill.
+    * View analysis (Avg Confidence, Experts, Beginners for that skill).
+    * See the **Talent Pipeline** (potential learners, 60-79% confidence) and available **Mentors** (Experts >=80% confidence, with their Archetype).
+* **Sub-Tab: 👥 Group Builder:**
+    * Select *any* skill.
+    * Configure number of groups and people per group.
+    * Optionally assign mentors automatically.
+    * Generates balanced training groups (Mentor + Learners).
+
+---
+
+### Conclusion
+
+Use the **Team Skills Hub** regularly to monitor progress, identify critical areas, and plan informed, data-driven development interventions (training, mentoring) to boost your team's capabilities!
+"""
+
 # ==============================================================================
-# STREAMLINED UI COMPONENTS (With Visual Enhancements)
+# UI Rendering Functions
 # ==============================================================================
 
 def render_strategic_overview(
@@ -43,15 +131,12 @@ def render_strategic_overview(
             st.subheader("🚨 Skill Risk Radar")
             st.caption("Top 5 tasks with the highest risk (few experts, many beginners).")
             if not risk_radar.empty:
-                # Display metrics first
                 risk_data_head = risk_radar.head(5)
                 for skill_name, row in risk_data_head.iterrows():
                     st.metric(label=skill_name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
 
-                # --- VISUAL ENHANCEMENT 1: Add Bar Chart for Risk Radar ---
                 st.markdown("**Risk Visualization**")
                 risk_data_head_reset = risk_data_head.reset_index().rename(columns={'index': 'Task'})
-                # Melt data for grouped bar chart
                 risk_melted = risk_data_head_reset.melt(id_vars='Task', value_vars=['Risk Index', 'Expert_Count', 'Beginner_Count'], var_name='Metric', value_name='Value')
 
                 fig_risk_bar = px.bar(
@@ -119,11 +204,10 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
         exp_df = user_df[user_df['License Expiration'].notna()].copy()
         if not exp_df.empty:
             exp_df['Days Left'] = (exp_df['License Expiration'] - today).dt.days
-            exp_df = exp_df[exp_df['Days Left'] > 0] # Only show future expirations
+            exp_df = exp_df[exp_df['Days Left'] > 0]
             if not exp_df.empty:
                 exp_df['Start'] = today
 
-                # --- VISUAL ENHANCEMENT 2: Color-code Timeline Bars ---
                 def get_color(days_left):
                     if days_left < 30: return 'red'
                     elif days_left < 90: return 'orange'
@@ -136,8 +220,8 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
                     x_end="License Expiration",
                     y="Name",
                     text="Days Left",
-                    color="Color", # Use the calculated color
-                    color_discrete_map={"red": "#EF553B", "orange": "#FFA15A", "green": "#00CC96"}, # Define colors explicitly
+                    color="Color",
+                    color_discrete_map={"red": "#EF553B", "orange": "#FFA15A", "green": "#00CC96"},
                     title="Upcoming Expirations (Colored by Urgency)"
                 )
                 fig.update_yaxes(categoryorder="total ascending")
@@ -228,7 +312,6 @@ def render_team_profiles(
                 team_avg_scores = df_merged.groupby('Category')['Score'].mean()
                 person_avg_scores = person_data.groupby('Category')['Score'].mean().reindex(team_avg_scores.index, fill_value=0)
 
-                # Ensure consistent order for radar chart categories
                 categories_ordered = sorted(team_avg_scores.index)
                 team_avg_ordered = team_avg_scores.reindex(categories_ordered)
                 person_avg_ordered = person_avg_scores.reindex(categories_ordered)
@@ -241,14 +324,11 @@ def render_team_profiles(
 
                 st.markdown("**Strengths & Development Areas**")
                 person_skills = person_data.set_index('Task_Prefixed')['Score'].sort_values(ascending=False)
-                # Get team average for *these specific tasks*
-                team_avg_tasks = df_merged.groupby('Task_Prefixed')['Score'].mean()
 
                 sc1, sc2 = st.columns(2)
                 with sc1:
                     st.markdown("✅ **Top 5 Skills**")
                     top_5 = person_skills.head(5).reset_index()
-                    # --- VISUAL ENHANCEMENT 3a: Replace Table with Bar Chart ---
                     fig_top = px.bar(
                         top_5,
                         y='Task_Prefixed',
@@ -260,13 +340,11 @@ def render_team_profiles(
                         )
                     fig_top.update_traces(texttemplate='%{x:.0%}', textposition='outside')
                     fig_top.update_layout(xaxis_range=[0,1], yaxis_title=None, xaxis_title="Confidence", margin=dict(l=0,r=0,t=30,b=0))
-                    # Add team average line? Maybe too cluttered. Let's omit for now.
                     st.plotly_chart(fig_top, use_container_width=True)
 
                 with sc2:
                     st.markdown("🌱 **Top 5 Improvement Areas**")
-                    bottom_5 = person_skills.tail(5).sort_values(ascending=True).reset_index() # Sort ascending for chart
-                    # --- VISUAL ENHANCEMENT 3b: Replace Table with Bar Chart ---
+                    bottom_5 = person_skills.tail(5).sort_values(ascending=True).reset_index()
                     fig_bottom = px.bar(
                         bottom_5,
                         y='Task_Prefixed',
@@ -303,7 +381,7 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
         st.warning(f"Please select at least one {analysis_type}.")
     else:
         skill_data = df_merged[df_merged[filter_col].isin(selected)]
-        avg_score_selected = skill_data['Score'].mean() # Calculate average for selected skill/category
+        avg_score_selected = skill_data['Score'].mean()
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Avg Confidence", f"{avg_score_selected:.1%}")
@@ -325,7 +403,6 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
             fig_hist = px.histogram(skill_data, x='Score', nbins=10, title="Confidence Score Distribution")
             fig_hist.update_layout(height=350, margin=dict(t=30, b=20), showlegend=False)
 
-            # --- VISUAL ENHANCEMENT 4: Add Average Line to Histogram ---
             fig_hist.add_vline(
                 x=avg_score_selected,
                 line_width=2,
@@ -348,7 +425,7 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
     risk_matrix: pd.DataFrame = analytics.get('risk_matrix', pd.DataFrame())
     talent_pipeline: pd.DataFrame = analytics.get('talent_pipeline', pd.DataFrame())
     df_merged_lookup: pd.DataFrame = analytics.get('df_merged_for_lookup')
-    person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame()) # Needed for Archetype
+    person_summary: pd.DataFrame = analytics.get('person_summary', pd.DataFrame())
 
     if df_merged_lookup is None or person_summary is None:
         st.error("Required data not available for this module.")
@@ -387,7 +464,6 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                     st.caption("People with 60-79% confidence in this skill.")
                     pipeline_for_skill = talent_pipeline[talent_pipeline['Task_Prefixed'] == selected_risk]
                     if not pipeline_for_skill.empty:
-                        # Display Archetype here too if useful
                         st.dataframe(pipeline_for_skill[['Name', 'Archetype', 'Score']], hide_index=True, use_container_width=True)
                     else:
                         st.warning("No candidates in the immediate pipeline. Broaden search.")
@@ -400,9 +476,8 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                         (df_merged_lookup['Score'] >= config.EXPERT_THRESHOLD)
                     ]
                     if not all_experts.empty:
-                        # --- VISUAL ENHANCEMENT 5: Add Archetype to Mentors Table ---
                         experts_with_archetype = pd.merge(
-                            all_experts[['Name', 'Score']].drop_duplicates(subset=['Name']), # Avoid duplicate names if expert in multiple related tasks
+                            all_experts[['Name', 'Score']].drop_duplicates(subset=['Name']),
                             person_summary[['Archetype']],
                             left_on='Name',
                             right_index=True,
@@ -471,6 +546,4 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
                                     else:
                                         st.warning(f"Not enough people to form Group {i+1}.")
 
-# ==============================================================================
-# LOGIN PAGE (Removed - function definition deleted)
-# ==============================================================================
+# --- EDIT: Removed login_page function ---
