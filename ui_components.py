@@ -14,11 +14,7 @@ import config
 GRAY_PALETTE = px.colors.sequential.Greys
 PLOTLY_TEMPLATE = "plotly_white"
 
-# --- Guide Text (Kept here for import by app.py) ---
-HOW_TO_USE_GUIDE = """
-## 📖 Team Skills Hub v3.2: How-to Use Guide
-# ... (guide text remains the same) ...
-"""
+# --- EDIT: Variable HOW_TO_USE_GUIDE eliminada de aquí ---
 
 # ==============================================================================
 # UI Rendering Functions
@@ -58,9 +54,8 @@ def render_strategic_overview(
                     st.metric(label=skill_name, value=f"{row['Avg_Score']:.1%} Avg. Confidence", delta=f"Risk Index: {row['Risk Index']:.2f}", delta_color="inverse")
 
                 st.markdown("**Risk Visualization**")
-                risk_data_head_reset = risk_data_head.reset_index().rename(columns={'index': 'Task'})
+                risk_data_head_reset = risk_data_head.reset_index().rename(columns={'Task_Prefixed': 'Task'})
 
-                # --- EDIT: Add check for required columns before melt ---
                 required_cols = ['Task', 'Risk Index', 'Expert_Count', 'Beginner_Count']
                 missing_cols = [col for col in required_cols if col not in risk_data_head_reset.columns]
 
