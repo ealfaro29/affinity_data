@@ -18,7 +18,7 @@ from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.6", # Version bump
+    page_title="Team Skills Hub v3.69", # Version bump
     layout="wide"
 )
 
