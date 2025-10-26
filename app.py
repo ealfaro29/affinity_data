@@ -18,23 +18,23 @@ from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.5", # Version bump
+    page_title="Team Skills Hub v3.6", # Version bump
     layout="wide"
 )
 
-@st.cache_data # Cache the guide content
+@st.cache_data
 def load_guide_content(filepath="guide.md") -> str:
     """Reads the content of the markdown guide file."""
     try:
         return Path(filepath).read_text(encoding="utf-8")
     except FileNotFoundError:
-        return "Error: guide.md not found. Please ensure the guide file exists."
+        return "Warning: guide.md not found. Please ensure the guide file exists." # Use warning
     except Exception as e:
-        return f"Error reading guide file: {e}"
+        return f"Warning: Error reading guide file: {e}" # Use warning
 
 def upload_landing_page():
     """
-    Renders the file upload screen AND the How-to Use guide from a file (Minimalist).
+    Renders the file upload screen AND the How-to Use guide from a file (Minimalist - Emoji Free).
     """
     st.title("Team Skills Hub") # No Emoji
     st.markdown("Follow the steps to analyze your team's skills, or read the guide below for detailed instructions.")
@@ -61,7 +61,7 @@ def upload_landing_page():
                     help="Includes all 'Task X' columns and required fields."
                 )
             except Exception as e:
-                st.error(f"Could not generate CSV template: {e}")
+                st.warning(f"Could not generate CSV template: {e}") # Use warning
 
     with col2:
         with st.container():
@@ -78,7 +78,7 @@ def upload_landing_page():
                     help="Provides a list of all skills/tasks for reference."
                 )
             except Exception as e:
-                st.error(f"Could not generate task guide: {e}")
+                st.warning(f"Could not generate task guide: {e}") # Use warning
 
     st.markdown("---")
 
@@ -101,13 +101,14 @@ def upload_landing_page():
             if data is not None and not data['merged_df'].empty:
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
-                st.info("Data loaded successfully.") # Use info instead of success
+                st.info("Data loaded successfully.") # Use info
                 st.rerun()
             elif data is not None and data['merged_df'].empty:
-                st.error("Processing complete, but no valid skill data was found. Please check your file and upload again.")
+                st.warning("Processing complete, but no valid skill data was found. Please check your file and upload again.") # Use warning
                 st.session_state.data_loaded = False
             else:
-                st.error("Error processing file. Please check format and column names.")
+                # If load_and_process_data returned None, it already showed a warning
+                # st.warning("Error processing file. Please check format and column names.") # Use warning (already handled in data_engine)
                 st.session_state.data_loaded = False
                 if 'processed_data' in st.session_state:
                     del st.session_state.processed_data
@@ -120,14 +121,14 @@ def upload_landing_page():
     st.header("How to Use the Team Skills Hub") # No Emoji
     guide_content = load_guide_content()
     with st.expander("Click here to read the full guide", expanded=False):
-        st.markdown(guide_content, unsafe_allow_html=True) # Keep unsafe_allow_html for markdown rendering
+        st.markdown(guide_content, unsafe_allow_html=True)
 
 
 def main_app():
     """Renders the main application interface (dashboard - Minimalist)."""
 
     if 'processed_data' not in st.session_state:
-        st.error("Data not found. Please upload again.")
+        st.warning("Data not found. Please upload again.") # Use warning
         st.session_state.data_loaded = False
         st.rerun()
         return
@@ -146,7 +147,8 @@ def main_app():
 
     if df_merged.empty:
         st.warning("No participants with valid scores were found in the uploaded file.")
-        st.stop()
+        # Decide if you want to stop or show empty tabs
+        st.stop() # Stop seems reasonable if data is empty
 
     # --- Analytics Engine ---
     analytics: Dict[str, Any] = compute_analytics(df_merged, user_df)
