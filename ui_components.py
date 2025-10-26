@@ -132,7 +132,7 @@ def render_affinity_status(user_df: pd.DataFrame, analytics: Dict[str, Any]):
                 fig.update_layout(legend_title_text='Urgency')
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("No upcoming license expirations.") # Use info instead of success
+                st.info("No upcoming license expirations.") # No Emoji
         else:
             st.info("No license expiration data found.")
 
@@ -203,7 +203,7 @@ def render_team_profiles(
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Overall Rank", rank_display)
                 c2.metric("Average Score", f"{person_stats['Avg Score']:.1%}")
-                c3.metric("Archetype", person_stats['Archetype'])
+                c3.metric("Archetype", person_stats['Archetype']) # Already plain text
                 st.divider()
 
                 team_avg_scores = df_merged.groupby('Category')['Score'].mean()
@@ -271,7 +271,7 @@ def render_skill_analysis(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Avg Confidence", f"{avg_score_selected:.1%}")
-        c2.metric("Experts (≥80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
+        c2.metric("Experts (>=80%)", skill_data[skill_data['Score'] >= config.EXPERT_THRESHOLD]['Name'].nunique())
         c3.metric("Beginners (<40%)", skill_data[skill_data['Score'] < config.BEGINNER_THRESHOLD]['Name'].nunique())
         st.divider()
 
@@ -387,13 +387,13 @@ def render_action_workbench(df_merged: pd.DataFrame, analytics: Dict[str, Any]):
 
             if st.form_submit_button("Generate Groups", type="primary", use_container_width=True):
                 if not selected_task:
-                    st.warning("Please select a skill.") # Changed from error
+                    st.warning("Please select a skill.")
                 else:
                     st.subheader(f"Generated Groups for: {selected_task}") # No Emoji
                     filtered_df = df_merged_lookup[df_merged_lookup['Task_Prefixed'] == selected_task]
 
                     if filtered_df.empty:
-                        st.warning("No participants found for the selected criteria.") # Changed from error
+                        st.warning("No participants found for the selected criteria.")
                     else:
                         group_scores = filtered_df.groupby('Name')['Score'].mean().sort_values()
                         mentors = group_scores[group_scores >= config.EXPERT_THRESHOLD].sort_values(ascending=False)

@@ -1,8 +1,8 @@
-## 📖 Team Skills Hub v3.2: How-to Use Guide
+## How to Use the Team Skills Hub
 
 ### Introduction
 
-Welcome to the **Team Skills Hub**, your central platform for understanding and developing your team's technical skills. This tool allows you to visualize self-assessed competencies, identify risks, find improvement opportunities, and plan development actions.
+Welcome to the Team Skills Hub, your central platform for understanding and developing your team's technical skills. This tool allows you to visualize self-assessed competencies, identify risks, find improvement opportunities, and plan development actions.
 
 ---
 
@@ -19,40 +19,40 @@ When you open the application, you'll see the welcome screen.
 
 ---
 
-### 📈 Tab: Strategic Overview
+### Tab: Overview
 
 This tab gives you a high-level view of the team's health and risks.
 
-* **📊 Team Vital Signs:** KPIs showing total people, active participants (% response rate), and the overall average confidence score.
-* **🩺 Data Health Check:** Shows assessment response rate, data quality issues (parsing errors), and lists pending participants.
-* **🚨 Skill Risk Radar:** Lists the top 5 skills with the highest risk (many beginners, few experts) and visualizes the Risk Index vs. Expert/Beginner counts.
-* **🗣️ Top Comment Themes:** Bar chart of the most frequent topics mentioned in user feedback.
+* **Team Vital Signs:** KPIs showing total people, active participants (% response rate), and the overall average confidence score.
+* **Data Health Check:** Shows assessment response rate, data quality issues (parsing errors), and lists pending participants.
+* **Skill Risk Radar:** Lists the top 5 skills with the highest risk (many beginners, few experts). Risk Index indicates the ratio of beginners to experts.
+* **Top Comment Themes:** Bar chart of the most frequent topics mentioned in user feedback.
 
 ---
 
-### ⭐ Tab: Affinity Status
+### Tab: Affinity Status
 
 Focuses on Affinity software management and team feedback.
 
-* **📊 Overall Software Status:** Metrics on active licenses and completion of McK training.
-* **🚨 License Expiration Timeline:** Visual timeline of upcoming license expirations, color-coded by urgency.
-* **🗣️ All Team Feedback:** A table displaying all raw comments provided by users.
+* **Overall Software Status:** Metrics on active licenses and completion of McK training.
+* **License Expiration Timeline:** Visual timeline of upcoming license expirations, color-coded by urgency (Dark Gray=Urgent, Gray=Medium, Light Gray=Low).
+* **All Team Feedback:** A table displaying all raw comments provided by users.
 
 ---
 
-### 👤 Tab: Team Profiles
+### Tab: Team Profiles
 
 Explore individual skill profiles.
 
-* **📇 Team Roster (Left Column):** Select a team member from this ranked list (includes Rank, Avg Score, Archetype, Assessed status).
-* **📇 Profile: [Selected Person] (Right Column):**
+* **Team Roster (Left Column):** Select a team member from this ranked list (includes Rank, Avg Score, Archetype, Assessed status).
+* **Profile: [Selected Person] (Right Column):**
     * **Metrics:** Shows the selected person's Rank, Avg Score, and calculated Archetype (Versatile Leader, Niche Specialist, Consistent Learner, Needs Support).
     * **Radar Chart:** Compares the individual's confidence *by category* against the team average.
     * **Strengths & Development Areas:** Bar charts showing the person's Top 5 skills and Top 5 areas for improvement.
 
 ---
 
-### 🧠 Tab: Skill Analysis
+### Tab: Skill Analysis
 
 Deep dive into team performance on specific skills or categories.
 
@@ -63,15 +63,15 @@ Deep dive into team performance on specific skills or categories.
 
 ---
 
-### 🔭 Tab: Action Workbench
+### Tab: Action Workbench
 
 Tools for making decisions and planning development.
 
-* **Sub-Tab: 🚨 Risk Mitigation:**
+* **Sub-Tab: Risk Mitigation:**
     * Select a high-risk skill.
     * View analysis (Avg Confidence, Experts, Beginners for that skill).
     * See the **Talent Pipeline** (potential learners, 60-79% confidence) and available **Mentors** (Experts >=80% confidence, with their Archetype).
-* **Sub-Tab: 👥 Group Builder:**
+* **Sub-Tab: Group Builder:**
     * Select *any* skill.
     * Configure number of groups and people per group.
     * Optionally assign mentors automatically.
@@ -81,4 +81,4 @@ Tools for making decisions and planning development.
 
 ### Conclusion
 
-Use the **Team Skills Hub** regularly to monitor progress, identify critical areas, and plan informed, data-driven development interventions (training, mentoring) to boost your team's capabilities!
+Use the Team Skills Hub regularly to monitor progress, identify critical areas, and plan informed, data-driven development interventions (training, mentoring) to boost your team's capabilities!
