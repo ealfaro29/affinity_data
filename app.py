@@ -19,7 +19,7 @@ from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.4",
+    page_title="Affinity Skills Hub",
     layout="wide"
 )
 
@@ -156,7 +156,7 @@ def main_app():
         analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
 
     # --- UI Rendering ---
-    st.title("🚀 Team Skills Hub v3.4")
+    st.title("🚀 Affinity Tracker")
 
     tabs = st.tabs([
         "📈 Strategic Overview",
