@@ -4,12 +4,11 @@
 
 import streamlit as st
 import pandas as pd
-# config import removed as DEVELOPMENT_MODE is gone
+from pathlib import Path # <-- Import Path
 from data_engine import load_and_process_data, generate_csv_template, generate_task_guide
 from analytics_engine import compute_analytics, analyze_comment_themes
-# --- EDIT: Removed render_how_to_guide import ---
+# --- EDIT: Removed HOW_TO_USE_GUIDE import ---
 from ui_components import (
-    HOW_TO_USE_GUIDE, # <-- IMPORT GUIDE TEXT DIRECTLY
     render_strategic_overview,
     render_affinity_status,
     render_team_profiles,
@@ -20,27 +19,35 @@ from typing import Dict, Any
 
 # Page configuration
 st.set_page_config(
-    page_title="Team Skills Hub v3.4", # Version bump
+    page_title="Team Skills Hub v3.4",
     layout="wide"
 )
 
-# --- EDIT: HOW_TO_USE_GUIDE text moved to ui_components.py, but imported here ---
+# --- EDIT: Function to read the guide file ---
+@st.cache_data # Cache the guide content
+def load_guide_content(filepath="guide.md") -> str:
+    """Reads the content of the markdown guide file."""
+    try:
+        return Path(filepath).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return "Error: guide.md not found. Please ensure the guide file exists."
+    except Exception as e:
+        return f"Error reading guide file: {e}"
 
 def upload_landing_page():
     """
-    Renders the file upload screen AND the How-to Use guide.
+    Renders the file upload screen AND the How-to Use guide from a file.
     """
     st.title("🚀 Welcome to the Team Skills Hub")
     st.markdown("Follow the steps to analyze your team's skills, or read the guide below for detailed instructions.")
 
     tasks_json_path = "tasks.json"
 
-    # --- Section 1: Upload and Resources ---
-    col_upload, col_resources = st.columns([2,1], gap="large") # Give more space to upload
+    col_upload, col_resources = st.columns([2,1], gap="large")
 
     with col_upload:
         with st.container(border=True):
-            st.subheader("Step 1: Upload Your Data File")
+            st.subheader("Step 1: Upload Your Data File") # Renumbered step
             st.markdown("Upload your completed `userData.csv` file here to begin the analysis.")
 
             uploaded_csv = st.file_uploader(
@@ -51,7 +58,7 @@ def upload_landing_page():
 
     with col_resources:
         with st.container(border=True):
-            st.subheader("Get Resources")
+            st.subheader("Get Resources") # Removed step number
             st.markdown("Download templates and guides to help prepare your data.")
 
             try:
@@ -90,7 +97,7 @@ def upload_landing_page():
                 st.session_state.processed_data = data
                 st.session_state.data_loaded = True
                 st.success("Data loaded successfully! 🎉")
-                st.rerun() # Rerun to show main_app
+                st.rerun()
             elif data is not None and data['merged_df'].empty:
                 st.error("Processing complete, but no valid skill data was found in the file. Please check your file and upload again.")
                 st.session_state.data_loaded = False
@@ -101,14 +108,15 @@ def upload_landing_page():
                     del st.session_state.processed_data
 
         elif st.session_state.data_loaded:
-            st.rerun() # Rerun if already loaded (e.g., browser refresh)
+            st.rerun()
 
-    st.markdown("---") # Separator before the guide
+    st.markdown("---")
 
-    # --- EDIT: Display How-to Guide Directly on Landing Page ---
+    # --- EDIT: Load and display guide from file ---
     st.header("📖 How to Use the Team Skills Hub")
-    with st.expander("Click here to read the full guide", expanded=False): # Collapsible by default
-        st.markdown(HOW_TO_USE_GUIDE, unsafe_allow_html=True)
+    guide_content = load_guide_content() # Load content using the cached function
+    with st.expander("Click here to read the full guide", expanded=False):
+        st.markdown(guide_content, unsafe_allow_html=True)
 
 
 def main_app():
@@ -129,7 +137,9 @@ def main_app():
     score_parsing_errors: int = data['parsing_errors']
 
     # Refresh button
-    st.button("🔄 Upload New Data", on_click=lambda: st.session_state.clear(), help="Clear current data and return to upload screen.")
+    # --- EDIT: Added key for stability ---
+    st.button("🔄 Upload New Data", key="refresh_button", on_click=lambda: st.session_state.clear(), help="Clear current data and return to upload screen.")
+
 
     if df_merged.empty:
         st.warning("No participants with valid scores were found in the uploaded file.")
@@ -146,9 +156,8 @@ def main_app():
         analytics['comment_themes'] = pd.DataFrame(columns=['Mentions'])
 
     # --- UI Rendering ---
-    st.title("🚀 Team Skills Hub v3.4") # Version bump
+    st.title("🚀 Team Skills Hub v3.4")
 
-    # --- EDIT: Removed "How-to Guide" Tab ---
     tabs = st.tabs([
         "📈 Strategic Overview",
         "⭐ Affinity Status",
@@ -167,7 +176,6 @@ def main_app():
         render_skill_analysis(df_merged, analytics)
     with tabs[4]:
         render_action_workbench(df_merged, analytics)
-    # --- EDIT: Removed Guide Tab rendering ---
 
 
 # --- Main execution (State Machine) ---
